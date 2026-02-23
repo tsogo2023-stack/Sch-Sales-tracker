@@ -1360,10 +1360,14 @@ function renderBoard() {
             <span style="color:var(--text-light)"> · </span>${p.color ? escHtml(p.color) : '—'}${p.finish === 'fine' ? ' <span style="font-size:0.68rem;font-weight:700;background:#ede9fe;color:#6d28d9;border-radius:4px;padding:0 4px">FS</span>' : ''}
           </div>`).join('')
         : `<div style="font-size:0.73rem;color:var(--text-light);font-style:italic">${state.lang === 'en' ? 'No products yet' : 'Бүтээгдэхүүн байхгүй'}</div>`;
+      const totalM2 = products.reduce((sum, p) => sum + (parseFloat(p.m2) || 0), 0);
+      const totalM2Html = totalM2 > 0
+        ? `<span style="font-size:0.75rem;font-weight:700;background:#dcfce7;color:#15803d;border-radius:8px;padding:1px 8px;white-space:nowrap">${totalM2 % 1 === 0 ? totalM2 : totalM2.toFixed(1)} m² total</span>`
+        : '';
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
           <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '🔍 Review' : '🔍 Хяналт'}</span>
-          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage2FilledBy)}${done}</div>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${totalM2Html}${authorBadge(order.stage2FilledBy)}${done}</div>
         </div>
         ${autoDuration ? row(state.lang === 'en' ? 'Duration:' : 'Хугацаа:', autoDuration) : ''}
         ${versionLines ? `<div style="margin-top:3px;padding-top:3px;border-top:1px solid var(--border)">${versionLines}</div>` : ''}
