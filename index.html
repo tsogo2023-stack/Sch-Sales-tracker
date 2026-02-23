@@ -1273,9 +1273,9 @@ function renderBoard() {
     };
 
     if (stageId === 'drawing_received') {
-      // Stage 1: anchor card — show name + client + drawing version count + latest date
+      // Stage 1: anchor card — show name + client + drawing version count + first received date
       const drawings = order.drawings || [];
-      const latest = drawings.length > 0 ? drawings[drawings.length - 1] : null;
+      const first = drawings.length > 0 ? drawings[0] : null;
       const versionBadge = drawings.length > 0
         ? `<span style="font-size:0.7rem;background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:1px 7px;font-weight:700">${drawings.length} ${drawings.length === 1 ? (state.lang === 'en' ? 'version' : 'хувилбар') : (state.lang === 'en' ? 'versions' : 'хувилбар')}</span>`
         : '';
@@ -1289,8 +1289,8 @@ function renderBoard() {
           ${escHtml(order.client)}
         </div>
         ${versionBadge}
-        ${latest && latest.date ? row(state.lang === 'en' ? 'Latest:' : 'Сүүлийн:', formatDate(latest.date)) : ''}
-        ${latest && latest.from ? row(state.lang === 'en' ? 'From:' : 'Илгээгч:', latest.from) : ''}
+        ${first && first.date ? row(state.lang === 'en' ? 'Received:' : 'Хүлээн авсан:', formatDate(first.date)) : ''}
+        ${first && first.from ? row(state.lang === 'en' ? 'From:' : 'Илгээгч:', first.from) : ''}
       `;
     }
     if (stageId === 'review') {
@@ -1312,7 +1312,7 @@ function renderBoard() {
             <span style="font-weight:600;color:var(--primary)">${catLabel(p.category)}</span>
             <span style="color:var(--text-light)"> · </span><span style="font-family:monospace">${escHtml(p.system || '—')}</span>
             <span style="color:var(--text-light)"> · </span>${p.m2 ? escHtml(String(p.m2)) + ' m²' : '—'}
-            <span style="color:var(--text-light)"> · </span>${p.color ? escHtml(p.color) : '—'}
+            <span style="color:var(--text-light)"> · </span>${p.color ? escHtml(p.color) : '—'}${p.finish === 'fine' ? ' <span style="font-size:0.68rem;font-weight:700;background:#ede9fe;color:#6d28d9;border-radius:4px;padding:0 4px">FS</span>' : ''}
           </div>`).join('')
         : `<div style="font-size:0.73rem;color:var(--text-light);font-style:italic">${state.lang === 'en' ? 'No products yet' : 'Бүтээгдэхүүн байхгүй'}</div>`;
       return `
@@ -1381,12 +1381,10 @@ function renderBoard() {
     let stageExtra = '';
     if (stage.id === 'drawing_received') {
       const drawings = order.drawings || [];
-      const latest = drawings.length > 0 ? drawings[drawings.length - 1] : null;
-      const vBadge = drawings.length > 0
-        ? `<span style="font-size:0.7rem;background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:1px 7px;font-weight:700;margin-bottom:3px;display:inline-block">${drawings.length} ${drawings.length === 1 ? (state.lang === 'en' ? 'version' : 'хувилбар') : (state.lang === 'en' ? 'versions' : 'хувилбар')}</span>` : '';
-      const dateRow = latest && latest.date ? `<div style="font-size:0.75rem;color:var(--text-light)">${state.lang === 'en' ? 'Latest:' : 'Сүүлийн:'} <span style="font-weight:500;color:var(--text)">${formatDate(latest.date)}</span></div>` : '';
-      const fromRow = latest && latest.from ? `<div style="font-size:0.75rem;color:var(--text-light)">${state.lang === 'en' ? 'From:' : 'Илгээгч:'} <span style="font-weight:500;color:var(--text)">${escHtml(latest.from)}</span></div>` : '';
-      stageExtra = vBadge + dateRow + fromRow;
+      const first = drawings.length > 0 ? drawings[0] : null;
+      const dateRow = first && first.date ? `<div style="font-size:0.75rem;color:var(--text-light)">${state.lang === 'en' ? 'Received:' : 'Хүлээн авсан:'} <span style="font-weight:500;color:var(--text)">${formatDate(first.date)}</span></div>` : '';
+      const fromRow = first && first.from ? `<div style="font-size:0.75rem;color:var(--text-light)">${state.lang === 'en' ? 'From:' : 'Илгээгч:'} <span style="font-weight:500;color:var(--text)">${escHtml(first.from)}</span></div>` : '';
+      stageExtra = dateRow + fromRow;
     }
     if (stage.id === 'sent_to_client') {
       // Days waiting for client approval since sent date
