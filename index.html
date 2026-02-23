@@ -1,0 +1,2624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Order Tracker</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #f0f2f5;
+  --card-bg: #fff;
+  --text: #1a1a2e;
+  --text-light: #6b7280;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --success: #10b981;
+  --border: #e5e7eb;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
+  --radius: 8px;
+}
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* Top Bar */
+.topbar {
+  background: linear-gradient(135deg, #1e3a5f, #2563eb);
+  color: #fff;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.topbar h1 { font-size: 1.3rem; font-weight: 700; }
+.topbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.topbar-actions button, .topbar-actions select {
+  padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.15); color: #fff; cursor: pointer; font-size: 0.85rem;
+  transition: background 0.2s;
+}
+.topbar-actions button:hover, .topbar-actions select:hover { background: rgba(255,255,255,0.3); }
+.topbar-actions select option { color: #333; background: #fff; }
+
+/* Toolbar */
+.toolbar {
+  padding: 12px 24px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+.toolbar input[type="text"] {
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 0.9rem; width: 220px;
+}
+.toolbar select {
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 0.9rem; background: #fff;
+}
+.btn {
+  padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+  font-size: 0.85rem; font-weight: 600; transition: all 0.2s;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: #059669; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #dc2626; }
+.btn-warning { background: var(--warning); color: #fff; }
+.btn-warning:hover { background: #d97706; }
+.btn-sm { padding: 4px 10px; font-size: 0.78rem; }
+
+/* Stats Bar */
+.stats-bar {
+  padding: 10px 24px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+.stat-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.85rem; color: var(--text-light);
+}
+.stat-num {
+  font-weight: 700; font-size: 1.1rem; color: var(--text);
+}
+.stat-warning { color: var(--danger); }
+
+/* Board */
+.board-container {
+  overflow-x: auto;
+  padding: 16px 16px 24px;
+}
+.board {
+  min-height: calc(100vh - 200px);
+}
+/* Board grid: rows = orders, columns = stages */
+.board-grid {
+  display: grid;
+  gap: 0;
+  min-width: max-content;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+.board-grid-header-cell {
+  background: #fff;
+  border-right: 1px solid var(--border);
+  border-bottom: 2px solid var(--primary);
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.column-count {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+.board-grid-cell {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 8px;
+  min-width: 230px;
+  min-height: 90px;
+  vertical-align: top;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.board-grid-cell:hover { filter: brightness(0.97); }
+.board-grid-cell.cell-current {
+  border-right: 2px solid var(--primary);
+  border-bottom: 2px solid var(--primary);
+}
+.board-grid-cell.cell-empty {
+  background: #f4f6f8;
+  opacity: 0.45;
+  cursor: default;
+}
+.board-grid-cell.cell-empty:hover { filter: none; }
+/* Row color tints (8 colors, one per order) */
+.row-color-0 { background: #eff6ff; }
+.row-color-1 { background: #f0fdf4; }
+.row-color-2 { background: #fffbeb; }
+.row-color-3 { background: #fef2f2; }
+.row-color-4 { background: #f5f3ff; }
+.row-color-5 { background: #fdf4ff; }
+.row-color-6 { background: #ecfeff; }
+.row-color-7 { background: #f7fee7; }
+
+/* Order Card */
+.order-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.1s;
+  border-left: 4px solid var(--primary);
+}
+.order-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+.order-card.stuck { border-left-color: var(--danger); background: #fef2f2; }
+.order-card.warning { border-left-color: var(--warning); background: #fffbeb; }
+.order-card.past-stage { border-left: 4px dashed #a3b8cc; background: #f8fafc; opacity: 0.82; }
+.order-card .card-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+.order-card .card-desc {
+  font-size: 0.75rem; color: var(--text-light); margin-bottom: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 230px;
+}
+.order-card .card-client {
+  font-size: 0.78rem; color: var(--text-light); margin-bottom: 4px;
+  display: flex; align-items: center; gap: 4px;
+}
+.order-card .card-meta {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px;
+}
+.client-dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+}
+.order-card .card-days {
+  font-size: 0.75rem; padding: 2px 8px; border-radius: 12px;
+  display: inline-block;
+}
+.badge {
+  font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; display: inline-block; font-weight: 600;
+}
+.badge-review { background: #ede9fe; color: #7c3aed; }
+.badge-invoice { background: #e0f2fe; color: #0369a1; }
+.badge-payment { background: #dcfce7; color: #16a34a; }
+.badge-unpaid { background: #fef2f2; color: #dc2626; }
+.days-ok { background: #ecfdf5; color: #059669; }
+.days-warn { background: #fffbeb; color: #d97706; }
+.days-danger { background: #fef2f2; color: #dc2626; }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 0;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h2 { font-size: 1.1rem; }
+.modal-close {
+  background: none; border: none; font-size: 1.5rem; cursor: pointer;
+  color: var(--text-light); padding: 4px 8px; border-radius: 4px;
+}
+.modal-close:hover { background: #f3f4f6; }
+.modal-body { padding: 20px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 0.9rem; font-family: inherit;
+}
+.form-group textarea { resize: vertical; min-height: 60px; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+.modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* Detail sections */
+.detail-stage {
+  background: #f0f7ff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-weight: 600;
+  color: var(--primary);
+}
+.detail-section {
+  background: #f8f9fb;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.detail-section h4 {
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.finance-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.85rem;
+}
+.finance-row.total {
+  font-weight: 700;
+  border-top: 2px solid var(--border);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+.finance-row .remaining { color: var(--danger); font-weight: 700; }
+.finance-row .paid-full { color: var(--success); font-weight: 700; }
+.payment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.83rem;
+}
+.payment-item:last-child { border-bottom: none; }
+.history-list { list-style: none; }
+.history-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  display: flex;
+  gap: 8px;
+}
+.history-date { color: var(--text-light); min-width: 90px; }
+.history-text { flex: 1; }
+.note-item {
+  background: #fffbeb;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  border-left: 3px solid var(--warning);
+}
+.note-date { font-size: 0.75rem; color: var(--text-light); }
+.review-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ede9fe;
+  color: #7c3aed;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Client color palette */
+.client-color-0 { background: #3b82f6; }
+.client-color-1 { background: #10b981; }
+.client-color-2 { background: #f59e0b; }
+.client-color-3 { background: #ef4444; }
+.client-color-4 { background: #8b5cf6; }
+.client-color-5 { background: #ec4899; }
+.client-color-6 { background: #06b6d4; }
+.client-color-7 { background: #84cc16; }
+
+/* View toggle */
+.view-table { display: none; padding: 16px 24px; }
+.view-table.active { display: block; }
+.board-container.hidden { display: none; }
+table.orders-table {
+  width: 100%; border-collapse: collapse; background: #fff;
+  border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.orders-table th, .orders-table td {
+  padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.orders-table th { background: #f8f9fb; font-weight: 700; }
+.orders-table tr:hover { background: #f8f9fb; cursor: pointer; }
+
+/* Tabs in detail modal */
+.detail-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 14px;
+}
+.detail-tab {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: var(--text-light);
+  transition: all 0.2s;
+}
+.detail-tab:hover { color: var(--text); }
+.detail-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+@media (max-width: 768px) {
+  .topbar { padding: 10px 12px; }
+  .topbar h1 { font-size: 1rem; }
+  .toolbar { padding: 8px 12px; }
+  .toolbar input[type="text"] { width: 150px; }
+  .column { min-width: 200px; }
+  .form-row { flex-direction: column; gap: 0; }
+}
+</style>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<!-- Password Gate -->
+<div id="passwordGate" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#1e3a5f,#2563eb);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:40px;width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
+    <h2 style="margin-bottom:6px;color:#1e3a5f;font-size:1.4rem">Sales Order Tracker</h2>
+    <p style="color:#6b7280;font-size:0.85rem;margin-bottom:24px">Enter password to continue</p>
+    <input id="pwInput" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()"
+      style="width:100%;padding:10px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;margin-bottom:12px;outline:none;box-sizing:border-box">
+    <div id="pwError" style="color:#ef4444;font-size:0.8rem;margin-bottom:10px;display:none">Incorrect password. Try again.</div>
+    <button onclick="checkPw()" style="width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600">Enter</button>
+  </div>
+</div>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <h1 id="appTitle"></h1>
+  <div class="topbar-actions">
+    <span id="syncStatus" style="display:inline-flex;align-items:center;gap:4px;font-size:0.75rem;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,0.15)">
+      <span id="syncDot" style="width:8px;height:8px;border-radius:50%;background:#f59e0b"></span>
+      <span id="syncText">Connecting...</span>
+    </span>
+    <button onclick="toggleLang()" id="btnLang"></button>
+    <button onclick="toggleView()" id="btnView"></button>
+    <button id="btnExport" onclick="exportData()">💾 Export</button>
+    <label id="lblImport" style="cursor:pointer">
+      <button onclick="this.nextElementSibling.click()">📂 Import</button>
+      <input type="file" accept=".json" style="display:none" onchange="importData(event)">
+    </label>
+    <span id="clientViewLabel" style="display:none;font-size:0.8rem;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,0.25);font-weight:600"></span>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <button class="btn btn-primary" onclick="openNewOrderModal()" id="btnNewOrder"></button>
+  <button class="btn btn-success" onclick="openClientModal()" id="btnManageClients"></button>
+  <input type="text" id="searchInput" oninput="renderBoard()">
+  <select id="filterClient" onchange="renderBoard()"></select>
+  <select id="filterStage" onchange="renderBoard()"></select>
+</div>
+
+<!-- Stats -->
+<div class="stats-bar" id="statsBar"></div>
+
+<!-- Kanban Board -->
+<div class="board-container" id="boardContainer">
+  <div class="board" id="board"></div>
+</div>
+
+<!-- Table View -->
+<div class="view-table" id="tableView">
+  <table class="orders-table">
+    <thead id="tableHead"></thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<!-- New Order Modal -->
+<div class="modal-overlay" id="newOrderModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalNewTitle"></h2>
+      <button class="modal-close" onclick="closeModal('newOrderModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label id="lblOrderName">Order / Drawing Name</label>
+        <input type="text" id="inputOrderName">
+      </div>
+      <div class="form-group">
+        <label id="lblClient">Client</label>
+        <select id="inputOrderClient"></select>
+      </div>
+      <div class="form-group">
+        <label id="lblDescription">Description</label>
+        <textarea id="inputOrderDesc" rows="2"></textarea>
+      </div>
+      <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin-bottom:14px">
+        <h4 style="font-size:0.85rem;color:var(--primary);margin-bottom:10px" id="lblEmailInfo">📧 Email / Source Information</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label id="lblReceivedFrom">Received From (sender)</label>
+            <input type="text" id="inputReceivedFrom" placeholder="">
+          </div>
+          <div class="form-group">
+            <label id="lblReceivedDate">Date Received</label>
+            <input type="date" id="inputReceivedDate">
+          </div>
+        </div>
+        <div class="form-group">
+          <label id="lblEmailSubject">Email Subject / Title</label>
+          <input type="text" id="inputEmailSubject" placeholder="">
+        </div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:14px">
+        <h4 style="font-size:0.85rem;color:var(--success);margin-bottom:10px" id="lblFilesSection">📁 Drawing Files</h4>
+        <div class="form-group">
+          <label id="lblFilePath">File Location / Folder Path</label>
+          <input type="text" id="inputFilePath" placeholder="C:\...">
+        </div>
+        <div class="form-group">
+          <label id="lblAttachment1">Attachment 1</label>
+          <input type="text" id="inputAttach1" placeholder="">
+        </div>
+        <div class="form-group">
+          <label id="lblAttachment2">Attachment 2</label>
+          <input type="text" id="inputAttach2" placeholder="">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label id="lblAttachment3">Attachment 3</label>
+          <input type="text" id="inputAttach3" placeholder="">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('newOrderModal')" id="btnCancel1">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewOrder()" id="btnSaveOrder">Save Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <h2 id="detailTitle"></h2>
+      <button class="modal-close" onclick="closeModal('detailModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer" id="detailFooter"></div>
+  </div>
+</div>
+
+<!-- Client Manager Modal -->
+<div class="modal-overlay" id="clientModal">
+  <div class="modal" style="max-width:450px">
+    <div class="modal-header">
+      <h2 id="modalClientTitle">Manage Clients</h2>
+      <button class="modal-close" onclick="closeModal('clientModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="clientBody"></div>
+    <div class="modal-footer">
+      <div style="display:flex;gap:6px;width:100%">
+        <input type="text" id="newClientName" style="flex:1;padding:8px 12px;border:1px solid #e5e7eb;border-radius:6px">
+        <button class="btn btn-primary" onclick="addClient()" id="btnAddClient">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== PASSWORD GATE =====
+const USERS = {
+  'ScH123':          { role: 'admin',     clientFilter: null },
+  'MongolynAlt2026': { role: 'client',    clientFilter: 'MAK' },
+  'Batmunkh123':     { role: 'client',    clientFilter: 'Ulamj' },
+  '2026AyusH':       { role: 'colleague', clientFilter: null }
+};
+function checkPw() {
+  const val = document.getElementById('pwInput').value;
+  const user = USERS[val];
+  if (user) {
+    sessionStorage.setItem('sch_auth', '1');
+    sessionStorage.setItem('sch_role', user.role);
+    sessionStorage.setItem('sch_client', user.clientFilter || '');
+    document.getElementById('passwordGate').style.display = 'none';
+    document.getElementById('pwInput').value = '';
+    updateUI();
+  } else {
+    document.getElementById('pwError').style.display = 'block';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+}
+// Show gate if not authenticated in this session
+if (sessionStorage.getItem('sch_auth') !== '1') {
+  document.getElementById('passwordGate').style.display = 'flex';
+  setTimeout(() => document.getElementById('pwInput').focus(), 100);
+} else {
+  document.getElementById('passwordGate').style.display = 'none';
+}
+
+// ===== FIREBASE CONFIG =====
+const firebaseConfig = {
+  apiKey: "AIzaSyD_ltbKwEfC22nNsH_teHfACUtqnQremKU",
+  authDomain: "sales-tracker-sch.firebaseapp.com",
+  databaseURL: "https://sales-tracker-sch-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "sales-tracker-sch",
+  storageBucket: "sales-tracker-sch.firebasestorage.app",
+  messagingSenderId: "808674424820",
+  appId: "1:808674424820:web:547edae56262888f602ba1"
+};
+
+let db = null;
+let firebaseReady = false;
+let isSaving = false; // prevent loops when Firebase pushes data back
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  firebaseReady = true;
+} catch(e) {
+  console.warn('Firebase init failed, using offline mode:', e);
+}
+
+// ===== DATA =====
+const STAGES = [
+  { id: 'drawing_received', en: '📥 Drawing Received', mn: '📥 Зураг хүлээн авсан' },
+  { id: 'review', en: '🔍 Review & Correction', mn: '🔍 Хянах & Засах' },
+  { id: 'sent_to_client', en: '📤 Sent to Client', mn: '📤 Захиалагчид илгээсэн' },
+  { id: 'client_approved', en: '✅ Client Approved', mn: '✅ Захиалагч зөвшөөрсөн' },
+  { id: 'sent_abroad', en: '🇩🇪 Sent to DE/GE', mn: '🇩🇪 Герман/Гүрж руу илгээсэн' },
+  { id: 'calculation_received', en: '📊 Calculation Received', mn: '📊 Тооцоо хүлээн авсан' },
+  { id: 'forwarded_mn', en: '🇲🇳 Forwarded (MN)', mn: '🇲🇳 Монголоор илгээсэн' },
+  { id: 'proforma', en: '📄 Proforma Invoice', mn: '📄 Проформа нэхэмжлэл' },
+  { id: 'payment', en: '💰 Payment', mn: '💰 Төлбөр' },
+  { id: 'transport', en: '🚚 Transport', mn: '🚚 Тээвэрлэлт' },
+  { id: 'documents_sent', en: '📋 Documents Sent', mn: '📋 Бичиг баримт илгээсэн' },
+  { id: 'completed', en: '✔️ Completed', mn: '✔️ Дууссан' }
+];
+
+const TRANSLATIONS = {
+  en: {
+    title: '📊 Sales Order Tracker',
+    newOrder: '+ New Order',
+    clients: '👥 Clients',
+    search: 'Search orders...',
+    allClients: 'All Clients',
+    allStages: 'All Stages',
+    tableView: '📋 Table View',
+    boardView: '📊 Board View',
+    export: '💾 Export',
+    import: '📂 Import',
+    orderName: 'Order / Drawing Name',
+    client: 'Client',
+    description: 'Description',
+    invoiceAmount: 'Invoice Amount (EUR)',
+    cancel: 'Cancel',
+    save: 'Save Order',
+    manageClients: 'Manage Clients',
+    addClient: 'Add',
+    newOrderTitle: 'New Order',
+    nextStage: 'Next Stage ➡️',
+    prevStage: '⬅️ Previous',
+    sendBackReview: '🔄 Send Back for Revision',
+    deleteOrder: '🗑️ Delete',
+    addNote: 'Add Note',
+    notes: 'Notes',
+    history: 'History',
+    finance: 'Finance',
+    info: 'Info',
+    stage: 'Current Stage',
+    daysHere: 'days here',
+    day: 'day',
+    days: 'days',
+    totalOrders: 'Total Orders',
+    activeOrders: 'Active',
+    stuckOrders: 'Stuck (7+ days)',
+    completedOrders: 'Completed',
+    totalInvoiced: 'Total Invoiced',
+    totalReceived: 'Total Received',
+    orderCol: 'Order',
+    clientCol: 'Client',
+    stageCol: 'Stage',
+    daysCol: 'Days',
+    reviewCol: 'Reviews',
+    invoiceCol: 'Invoice',
+    paidCol: 'Paid',
+    balanceCol: 'Balance',
+    createdCol: 'Created',
+    noOrders: 'No orders yet. Click "+ New Order" to start!',
+    confirmDelete: 'Are you sure you want to delete this order?',
+    movedTo: 'Moved to',
+    created: 'Order created',
+    noteAdded: 'Note added',
+    enterNote: 'Write a note...',
+    clientName: 'Client name...',
+    langBtn: '🇲🇳 Монгол',
+    noClients: 'No clients added yet.',
+    removeClient: 'Remove',
+    reviewCycles: 'Review Cycles',
+    revisions: 'revisions',
+    revision: 'revision',
+    sentBackReview: 'Sent back for revision',
+    invoiceTotal: 'Invoice Total',
+    totalPaid: 'Total Paid',
+    remaining: 'Remaining',
+    paidInFull: 'PAID IN FULL',
+    addPayment: 'Add Payment',
+    paymentDate: 'Date',
+    paymentAmount: 'Amount (EUR)',
+    paymentNote: 'Note (optional)',
+    payments: 'Payments',
+    noPayments: 'No payments recorded yet.',
+    editDescription: 'Edit Description',
+    editInvoice: 'Edit Invoice Amount',
+    saveChanges: 'Save',
+    descriptionPlaceholder: 'Add a description for this order...',
+    editInfo: 'Edit',
+    emailInfo: '📧 Email / Source Information',
+    receivedFrom: 'Received From (sender)',
+    receivedDate: 'Date Received',
+    emailSubject: 'Email Subject / Title',
+    filesSection: '📁 Drawing Files',
+    filePath: 'File Location / Folder Path',
+    attachment1: 'Attachment 1',
+    attachment2: 'Attachment 2',
+    attachment3: 'Attachment 3',
+    drawingInfo: 'Drawing Receipt Info',
+    sender: 'Sender',
+    emailTitle: 'Email Title',
+    fileLocation: 'File Location',
+    attachments: 'Attachments',
+    noAttachments: 'No attachments',
+    editDrawingInfo: 'Edit',
+    addDrawingVersion: '+ Add Drawing Version',
+    drawingVersion: 'V',
+    noDrawings: 'No drawing receipts yet. Click "+ Add Drawing Version" to add one.',
+    stage1Info: '📥 Stage 1: Drawing Received',
+    stage2Info: '🔍 Stage 2: Review & Correction',
+    stage3Info: '📤 Stage 3: Sent to Client',
+    stage4Info: '✅ Stage 4: Client Approved',
+    driveLink: 'Google Drive Link',
+    driveLinkPlaceholder: 'Paste Google Drive shareable link here...',
+    openInDrive: '📂 Open in Drive',
+    noDriveLink: 'No link saved',
+    reviewDate: 'Review Completed Date',
+    reviewSummary: 'Correction Notes',
+    reviewSummaryPlaceholder: 'Any additional notes about the corrections...',
+    reviewDuration: 'Duration (days worked)',
+    reviewDurationPlaceholder: 'e.g. 2.5',
+    reviewProducts: 'Schueco Products',
+    addProduct: '+ Add Product Line',
+    noProducts: 'No products added yet. Click "+ Add Product Line".',
+    productCategory: 'Category',
+    productSystem: 'System Name',
+    productSystemPlaceholder: 'e.g. AWS 75.SI+',
+    productM2: 'm²',
+    productColor: 'Color (RAL)',
+    productColorPlaceholder: 'e.g. RAL 7040 Anthracite',
+    productFinish: 'Finish',
+    finishNormal: 'Normal RAL',
+    finishFine: 'Fine Structure',
+    catWindow: 'Window',
+    catDoor: 'Door',
+    catFacade: 'Facade',
+    sentDate: 'Date Sent to Client',
+    sentEmailSubject: 'Email Subject (sent to client)',
+    approvedDate: 'Client Approval Date',
+    approvedEmailSubject: 'Email Subject (approval from client)',
+    invoicesSection: 'Invoices',
+    addInvoice: 'Add Invoice',
+    invoiceAmount2: 'Amount (EUR)',
+    invoiceDate: 'Invoice Date',
+    invoiceNote: 'Description / Note',
+    invoiceNotePlaceholder: 'What this invoice covers...',
+    noInvoices: 'No invoices yet. Click "+ Add Invoice" to add one.'
+  },
+  mn: {
+    title: '📊 Борлуулалтын захиалгын хяналт',
+    newOrder: '+ Шинэ захиалга',
+    clients: '👥 Захиалагчид',
+    search: 'Захиалга хайх...',
+    allClients: 'Бүх захиалагч',
+    allStages: 'Бүх шат',
+    tableView: '📋 Хүснэгт',
+    boardView: '📊 Самбар',
+    export: '💾 Экспорт',
+    import: '📂 Импорт',
+    orderName: 'Захиалга / Зургийн нэр',
+    client: 'Захиалагч',
+    description: 'Тайлбар',
+    invoiceAmount: 'Нэхэмжлэлийн дүн (EUR)',
+    cancel: 'Цуцлах',
+    save: 'Хадгалах',
+    manageClients: 'Захиалагчдын жагсаалт',
+    addClient: 'Нэмэх',
+    newOrderTitle: 'Шинэ захиалга',
+    nextStage: 'Дараагийн шат ➡️',
+    prevStage: '⬅️ Өмнөх',
+    sendBackReview: '🔄 Засвар руу буцаах',
+    deleteOrder: '🗑️ Устгах',
+    addNote: 'Тэмдэглэл нэмэх',
+    notes: 'Тэмдэглэлүүд',
+    history: 'Түүх',
+    finance: 'Санхүү',
+    info: 'Мэдээлэл',
+    stage: 'Одоогийн шат',
+    daysHere: 'өдөр болсон',
+    day: 'өдөр',
+    days: 'өдөр',
+    totalOrders: 'Нийт захиалга',
+    activeOrders: 'Идэвхтэй',
+    stuckOrders: 'Саатсан (7+ өдөр)',
+    completedOrders: 'Дууссан',
+    totalInvoiced: 'Нийт нэхэмжлэл',
+    totalReceived: 'Нийт хүлээн авсан',
+    orderCol: 'Захиалга',
+    clientCol: 'Захиалагч',
+    stageCol: 'Шат',
+    daysCol: 'Өдөр',
+    reviewCol: 'Хянах',
+    invoiceCol: 'Нэхэмжлэл',
+    paidCol: 'Төлсөн',
+    balanceCol: 'Үлдэгдэл',
+    createdCol: 'Үүсгэсэн',
+    noOrders: 'Захиалга байхгүй. "+ Шинэ захиалга" дарна уу!',
+    confirmDelete: 'Энэ захиалгыг устгах уу?',
+    movedTo: 'Шилжүүлсэн:',
+    created: 'Захиалга үүсгэсэн',
+    noteAdded: 'Тэмдэглэл нэмсэн',
+    enterNote: 'Тэмдэглэл бичих...',
+    clientName: 'Захиалагчийн нэр...',
+    langBtn: '🇬🇧 English',
+    noClients: 'Захиалагч нэмээгүй байна.',
+    removeClient: 'Хасах',
+    reviewCycles: 'Хянах тойрог',
+    revisions: 'засвар',
+    revision: 'засвар',
+    sentBackReview: 'Засвар руу буцаасан',
+    invoiceTotal: 'Нэхэмжлэлийн дүн',
+    totalPaid: 'Нийт төлсөн',
+    remaining: 'Үлдэгдэл',
+    paidInFull: 'БҮРЭН ТӨЛСӨН',
+    addPayment: 'Төлбөр нэмэх',
+    paymentDate: 'Огноо',
+    paymentAmount: 'Дүн (EUR)',
+    paymentNote: 'Тэмдэглэл (сонголтоор)',
+    payments: 'Төлбөрүүд',
+    noPayments: 'Төлбөр бүртгэгдээгүй байна.',
+    editDescription: 'Тайлбар засах',
+    editInvoice: 'Нэхэмжлэлийн дүн засах',
+    saveChanges: 'Хадгалах',
+    descriptionPlaceholder: 'Энэ захиалгын тайлбар нэмэх...',
+    editInfo: 'Засах',
+    emailInfo: '📧 Имэйл / Эх сурвалж мэдээлэл',
+    receivedFrom: 'Хэнээс хүлээн авсан',
+    receivedDate: 'Хүлээн авсан огноо',
+    emailSubject: 'Имэйлийн гарчиг',
+    filesSection: '📁 Зургийн файлууд',
+    filePath: 'Файлын байршил / Хавтасны зам',
+    attachment1: 'Хавсралт 1',
+    attachment2: 'Хавсралт 2',
+    attachment3: 'Хавсралт 3',
+    drawingInfo: 'Зураг хүлээн авсан мэдээлэл',
+    sender: 'Илгээгч',
+    emailTitle: 'Имэйлийн гарчиг',
+    fileLocation: 'Файлын байршил',
+    attachments: 'Хавсралтууд',
+    noAttachments: 'Хавсралт байхгүй',
+    editDrawingInfo: 'Засах',
+    addDrawingVersion: '+ Зургийн хувилбар нэмэх',
+    drawingVersion: 'V',
+    noDrawings: 'Зургийн хүлээлт байхгүй. "+ Зургийн хувилбар нэмэх" дарна уу.',
+    stage1Info: '📥 1-р шат: Зураг хүлээн авсан',
+    stage2Info: '🔍 2-р шат: Хянах & Засах',
+    stage3Info: '📤 3-р шат: Захиалагчид илгээсэн',
+    stage4Info: '✅ 4-р шат: Захиалагч зөвшөөрсөн',
+    driveLink: 'Google Drive холбоос',
+    driveLinkPlaceholder: 'Google Drive-ын хуваалцах холбоосыг энд буулгана уу...',
+    openInDrive: '📂 Drive-д нээх',
+    noDriveLink: 'Холбоос хадгалаагүй',
+    reviewDate: 'Хянасан огноо',
+    reviewSummary: 'Засварын тэмдэглэл',
+    reviewSummaryPlaceholder: 'Нэмэлт тэмдэглэл...',
+    reviewDuration: 'Хугацаа (ажилласан өдөр)',
+    reviewDurationPlaceholder: 'жишээ: 2.5',
+    reviewProducts: 'Schueco бүтээгдэхүүн',
+    addProduct: '+ Бүтээгдэхүүн нэмэх',
+    noProducts: 'Бүтээгдэхүүн байхгүй. "+ Бүтээгдэхүүн нэмэх" дарна уу.',
+    productCategory: 'Төрөл',
+    productSystem: 'Системийн нэр',
+    productSystemPlaceholder: 'жишээ: AWS 75.SI+',
+    productM2: 'м²',
+    productColor: 'Өнгө (RAL)',
+    productColorPlaceholder: 'жишээ: RAL 7040 Антрацит',
+    productFinish: 'Гадаргуу',
+    finishNormal: 'Энгийн RAL',
+    finishFine: 'Нарийн бүтэц',
+    catWindow: 'Цонх',
+    catDoor: 'Хаалга',
+    catFacade: 'Фасад',
+    sentDate: 'Захиалагчид илгээсэн огноо',
+    sentEmailSubject: 'Имэйлийн гарчиг (илгээсэн)',
+    approvedDate: 'Зөвшөөрсөн огноо',
+    approvedEmailSubject: 'Имэйлийн гарчиг (зөвшөөрлийн)',
+    invoicesSection: 'Нэхэмжлэлүүд',
+    addInvoice: 'Нэхэмжлэл нэмэх',
+    invoiceAmount2: 'Дүн (EUR)',
+    invoiceDate: 'Нэхэмжлэлийн огноо',
+    invoiceNote: 'Тайлбар / Тэмдэглэл',
+    invoiceNotePlaceholder: 'Энэ нэхэмжлэл юуг хамарч байгаа...',
+    noInvoices: 'Нэхэмжлэл байхгүй. "+ Нэхэмжлэл нэмэх" дарна уу.'
+  }
+};
+
+let state = {
+  lang: 'en',
+  view: 'board',
+  clients: [],
+  orders: [],
+  nextOrderId: 1
+};
+
+// ===== PERSISTENCE =====
+function migrateOrders(orders) {
+  (orders || []).forEach(o => {
+    if (o.reviewCycles === undefined) o.reviewCycles = 0;
+    if (!o.notes) o.notes = [];        // Firebase drops empty arrays → undefined
+    if (!o.history) o.history = [];    // Firebase drops empty arrays → undefined
+    if (o.invoiceAmount === undefined) o.invoiceAmount = 0;
+    if (o.payments === undefined) o.payments = [];
+    if (o.receivedFrom === undefined) o.receivedFrom = '';
+    if (o.receivedDate === undefined) o.receivedDate = '';
+    if (o.emailSubject === undefined) o.emailSubject = '';
+    if (o.filePath === undefined) o.filePath = '';
+    if (o.attachments === undefined) o.attachments = [];
+    // Stage-specific fields (added for colleague workflow)
+    if (o.driveLink === undefined) o.driveLink = '';
+    // Drawing versions log: migrate old single fields into drawings[0]
+    if (!o.drawings) {
+      const hasOld = o.receivedFrom || o.receivedDate || o.emailSubject || o.driveLink;
+      o.drawings = hasOld
+        ? [{ id: 1, date: o.receivedDate || '', from: o.receivedFrom || '', subject: o.emailSubject || '', driveLink: o.driveLink || '' }]
+        : [];
+      o.nextDrawingId = o.drawings.length > 0 ? 2 : 1;
+    }
+    if (o.nextDrawingId === undefined) {
+      o.nextDrawingId = o.drawings.length > 0 ? Math.max(...o.drawings.map(d => d.id)) + 1 : 1;
+    }
+    if (o.reviewDate === undefined) o.reviewDate = '';
+    if (o.reviewSummary === undefined) o.reviewSummary = '';
+    if (o.reviewDriveLink === undefined) o.reviewDriveLink = '';
+    if (o.reviewDuration === undefined) o.reviewDuration = '';
+    if (!o.reviewProducts) { o.reviewProducts = []; o.nextProductId = 1; }
+    if (o.nextProductId === undefined) {
+      o.nextProductId = o.reviewProducts.length > 0 ? Math.max(...o.reviewProducts.map(p => p.id)) + 1 : 1;
+    }
+    o.reviewProducts.forEach(p => { if (!p.finish) p.finish = 'normal'; }); // migrate: add finish type
+    if (o.sentDate === undefined) o.sentDate = '';
+    if (o.sentEmailSubject === undefined) o.sentEmailSubject = '';
+    if (o.sentDriveLink === undefined) o.sentDriveLink = '';
+    if (o.approvedDate === undefined) o.approvedDate = '';
+    if (o.approvedEmailSubject === undefined) o.approvedEmailSubject = '';
+    if (o.approvedDriveLink === undefined) o.approvedDriveLink = '';
+    // Stage author badges: who filled each step (role: 'admin'=Ts, 'colleague'=Ayush)
+    // stageBadgesFixed flag: once set, badges are real saves and must not be overwritten by migration
+    if (!o.stageBadgesFixed) {
+      // One-time correction: old migration wrongly wrote 'admin'; all existing data was filled by Ayush
+      o.stage1FilledBy = (o.drawings && o.drawings.length > 0) ? 'colleague' : '';
+      o.stage2FilledBy = ((o.reviewProducts && o.reviewProducts.length > 0) || o.reviewDuration) ? 'colleague' : '';
+      o.stage3FilledBy = (o.sentDate || o.sentEmailSubject) ? 'colleague' : '';
+      o.stage4FilledBy = (o.approvedDate || o.approvedEmailSubject) ? 'colleague' : '';
+      o.stageBadgesFixed = true; // never run this block again for this order
+    }
+    // Multi-invoice migration: convert old single invoiceAmount to invoices[]
+    if (o.invoices === undefined) {
+      if (o.invoiceAmount && o.invoiceAmount > 0) {
+        o.invoices = [{ id: 1, amount: o.invoiceAmount, date: '', note: '' }];
+        o.nextInvoiceId = 2;
+      } else {
+        o.invoices = [];
+        o.nextInvoiceId = 1;
+      }
+    }
+    if (o.nextInvoiceId === undefined) {
+      o.nextInvoiceId = (o.invoices.length > 0)
+        ? Math.max(...o.invoices.map(i => i.id)) + 1 : 1;
+    }
+  });
+}
+
+function saveState() {
+  // Always save to localStorage as backup
+  try { localStorage.setItem('salesTracker', JSON.stringify(state)); } catch(e) {}
+  // Save to Firebase if connected
+  if (firebaseReady && db && !isSaving) {
+    isSaving = true;
+    db.ref('state').set(state).then(() => {
+      isSaving = false;
+    }).catch(err => {
+      isSaving = false;
+      console.warn('Firebase save failed:', err);
+    });
+  }
+}
+
+function loadState() {
+  // Load from localStorage first (instant, offline-ready)
+  try {
+    const d = localStorage.getItem('salesTracker');
+    if (d) {
+      state = JSON.parse(d);
+      migrateOrders(state.orders);
+    }
+  } catch(e) {}
+}
+
+function setupFirebaseSync() {
+  if (!firebaseReady || !db) {
+    setSyncStatus('offline');
+    return;
+  }
+
+  setSyncStatus('connecting');
+
+  // Monitor connection status — .info/connected fires false first, then true once connected
+  let hasConnected = false;
+  db.ref('.info/connected').on('value', snap => {
+    if (snap.val() === true) {
+      hasConnected = true;
+      setSyncStatus('online');
+    } else if (hasConnected) {
+      // Only show offline after we had a connection (not on the initial false)
+      setSyncStatus('offline');
+    }
+  });
+
+  // Listen for real-time changes from Firebase (syncs between users)
+  db.ref('state').on('value', snapshot => {
+    hasConnected = true;
+    setSyncStatus('online');
+    if (isSaving) return; // ignore our own writes coming back
+    const data = snapshot.val();
+    if (data && data.orders) {
+      migrateOrders(data.orders);
+      state = data;
+      try { localStorage.setItem('salesTracker', JSON.stringify(state)); } catch(e) {}
+      updateUI();
+    }
+  }, err => {
+    setSyncStatus('error');
+  });
+}
+
+function setSyncStatus(status) {
+  const dot = document.getElementById('syncDot');
+  const text = document.getElementById('syncText');
+  if (!dot || !text) return;
+  if (status === 'online') {
+    dot.style.background = '#10b981';
+    text.textContent = state.lang === 'en' ? 'Synced' : 'Синк';
+  } else if (status === 'offline') {
+    dot.style.background = '#ef4444';
+    text.textContent = state.lang === 'en' ? 'Offline' : 'Офлайн';
+  } else if (status === 'error') {
+    dot.style.background = '#ef4444';
+    text.textContent = state.lang === 'en' ? 'Sync error' : 'Алдаа';
+  } else {
+    dot.style.background = '#f59e0b';
+    text.textContent = state.lang === 'en' ? 'Connecting...' : 'Холбогдож байна...';
+  }
+}
+
+// ===== LANG =====
+function t(key) { return TRANSLATIONS[state.lang][key] || key; }
+function stageName(stageId) {
+  const s = STAGES.find(s => s.id === stageId);
+  return s ? s[state.lang] : stageId;
+}
+function toggleLang() {
+  state.lang = state.lang === 'en' ? 'mn' : 'en';
+  saveState();
+  updateUI();
+}
+
+// ===== VIEW =====
+function toggleView() {
+  state.view = state.view === 'board' ? 'table' : 'board';
+  saveState();
+  updateUI();
+}
+
+// ===== HELPERS =====
+function daysBetween(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return Math.floor((now - d) / (1000 * 60 * 60 * 24));
+}
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString(state.lang === 'mn' ? 'mn-MN' : 'en-US', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
+}
+function formatEur(amount) {
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount || 0);
+}
+function getTotalPaid(order) {
+  return (order.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+}
+function getTotalInvoiced(order) {
+  return (order.invoices || []).reduce((s, inv) => s + (inv.amount || 0), 0);
+}
+function getRemaining(order) {
+  return getTotalInvoiced(order) - getTotalPaid(order);
+}
+function getClientColor(clientName) {
+  const idx = state.clients.indexOf(clientName);
+  return idx >= 0 ? idx % 8 : 0;
+}
+function getFilteredOrders() {
+  let orders = state.orders;
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const client = document.getElementById('filterClient').value;
+  const stage = document.getElementById('filterStage').value;
+  if (search) orders = orders.filter(o =>
+    o.name.toLowerCase().includes(search) ||
+    (o.description || '').toLowerCase().includes(search) ||
+    (o.receivedFrom || '').toLowerCase().includes(search) ||
+    (o.emailSubject || '').toLowerCase().includes(search) ||
+    (o.filePath || '').toLowerCase().includes(search) ||
+    (o.attachments || []).some(a => a.toLowerCase().includes(search))
+  );
+  if (client) orders = orders.filter(o => o.client === client);
+  if (stage) orders = orders.filter(o => o.stage === stage);
+  // Client-role users are always locked to their own client
+  const clientLock = sessionStorage.getItem('sch_client');
+  if (clientLock) orders = orders.filter(o => o.client === clientLock);
+  return orders;
+}
+
+// ===== RENDER =====
+function updateUI() {
+  // Update sync status text for current language
+  const syncDot = document.getElementById('syncDot');
+  if (syncDot) {
+    const color = syncDot.style.background;
+    if (color.includes('10b981') || color.includes('rgb(16, 185, 129)')) setSyncStatus('online');
+    else if (color.includes('ef4444') || color.includes('rgb(239, 68, 68)')) setSyncStatus('offline');
+    else setSyncStatus('connecting');
+  }
+  document.getElementById('appTitle').textContent = t('title');
+  document.getElementById('btnNewOrder').textContent = t('newOrder');
+  document.getElementById('btnManageClients').textContent = t('clients');
+  document.getElementById('searchInput').placeholder = t('search');
+  document.getElementById('btnLang').textContent = state.lang === 'en' ? '🇲🇳 Монгол' : '🇬🇧 English';
+  document.getElementById('btnView').textContent = state.view === 'board' ? t('tableView') : t('boardView');
+  document.getElementById('modalNewTitle').textContent = t('newOrderTitle');
+  document.getElementById('lblOrderName').textContent = t('orderName');
+  document.getElementById('lblClient').textContent = t('client');
+  document.getElementById('lblDescription').textContent = t('description');
+  document.getElementById('lblEmailInfo').textContent = t('emailInfo');
+  document.getElementById('lblReceivedFrom').textContent = t('receivedFrom');
+  document.getElementById('lblReceivedDate').textContent = t('receivedDate');
+  document.getElementById('lblEmailSubject').textContent = t('emailSubject');
+  document.getElementById('lblFilesSection').textContent = t('filesSection');
+  document.getElementById('lblFilePath').textContent = t('filePath');
+  document.getElementById('lblAttachment1').textContent = t('attachment1');
+  document.getElementById('lblAttachment2').textContent = t('attachment2');
+  document.getElementById('lblAttachment3').textContent = t('attachment3');
+  document.getElementById('btnCancel1').textContent = t('cancel');
+  document.getElementById('btnSaveOrder').textContent = t('save');
+  document.getElementById('modalClientTitle').textContent = t('manageClients');
+  document.getElementById('btnAddClient').textContent = t('addClient');
+  document.getElementById('newClientName').placeholder = t('clientName');
+
+  // Filters
+  const fc = document.getElementById('filterClient');
+  const currentClient = fc.value;
+  fc.innerHTML = `<option value="">${t('allClients')}</option>`;
+  state.clients.forEach(c => {
+    fc.innerHTML += `<option value="${c}" ${c === currentClient ? 'selected' : ''}>${c}</option>`;
+  });
+
+  const fs = document.getElementById('filterStage');
+  const currentStage = fs.value;
+  fs.innerHTML = `<option value="">${t('allStages')}</option>`;
+  STAGES.forEach(s => {
+    fs.innerHTML += `<option value="${s.id}" ${s.id === currentStage ? 'selected' : ''}>${s[state.lang]}</option>`;
+  });
+
+  // Client select in new order modal
+  const cs = document.getElementById('inputOrderClient');
+  cs.innerHTML = '';
+  state.clients.forEach(c => {
+    cs.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+
+  renderBoard();
+  renderTable();
+  renderStats();
+
+  // Toggle views
+  document.getElementById('boardContainer').classList.toggle('hidden', state.view !== 'board');
+  document.getElementById('tableView').classList.toggle('active', state.view === 'table');
+
+  // Role-based UI controls
+  const _role = sessionStorage.getItem('sch_role');
+  const clientLock = sessionStorage.getItem('sch_client');
+  const isClient = _role === 'client';
+  const isColleague = _role === 'colleague';
+  const isClientOrColleague = isClient || isColleague;
+  const hide = el => { if (el) el.style.display = 'none'; };
+  const show = (el, display) => { if (el) el.style.display = display || ''; };
+  if (isClientOrColleague) {
+    // Colleague CAN create new orders (they receive drawings); client cannot
+    if (isClient) hide(document.getElementById('btnNewOrder'));
+    else show(document.getElementById('btnNewOrder'), 'inline-flex');
+    hide(document.getElementById('btnManageClients'));
+    hide(document.getElementById('filterClient'));
+    hide(document.getElementById('btnExport'));
+    hide(document.getElementById('lblImport'));
+    const lbl = document.getElementById('clientViewLabel');
+    if (lbl) {
+      lbl.style.display = 'inline-flex';
+      lbl.textContent = clientLock ? '👁 ' + clientLock : '👁 All Clients';
+    }
+  } else {
+    show(document.getElementById('btnNewOrder'), 'inline-flex');
+    show(document.getElementById('btnManageClients'), 'inline-flex');
+    show(document.getElementById('filterClient'));
+    show(document.getElementById('btnExport'));
+    show(document.getElementById('lblImport'));
+    hide(document.getElementById('clientViewLabel'));
+  }
+}
+
+function renderStats() {
+  const orders = state.orders;
+  const active = orders.filter(o => o.stage !== 'completed').length;
+  const stuck = orders.filter(o => o.stage !== 'completed' && daysBetween(o.stageDate) >= 7).length;
+  const done = orders.filter(o => o.stage === 'completed').length;
+  const totalInvoiced = orders.reduce((s, o) => s + getTotalInvoiced(o), 0);
+  const totalPaid = orders.reduce((s, o) => s + getTotalPaid(o), 0);
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-item"><span class="stat-num">${orders.length}</span> ${t('totalOrders')}</div>
+    <div class="stat-item"><span class="stat-num">${active}</span> ${t('activeOrders')}</div>
+    <div class="stat-item ${stuck > 0 ? 'stat-warning' : ''}"><span class="stat-num ${stuck > 0 ? 'stat-warning' : ''}">${stuck}</span> ${t('stuckOrders')}</div>
+    <div class="stat-item"><span class="stat-num">${done}</span> ${t('completedOrders')}</div>
+    <div class="stat-item" style="margin-left:auto"><span style="font-size:0.8rem">${t('totalInvoiced')}:</span> <span class="stat-num" style="font-size:0.95rem">${formatEur(totalInvoiced)}</span></div>
+    <div class="stat-item"><span style="font-size:0.8rem">${t('totalReceived')}:</span> <span class="stat-num" style="font-size:0.95rem;color:var(--success)">${formatEur(totalPaid)}</span></div>
+  `;
+}
+
+function renderBoard() {
+  const orders = getFilteredOrders();
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  // Stage indices for the first 4 workflow stages (managed by colleague/admin)
+  const EARLY_STAGE_IDS = ['drawing_received', 'review', 'sent_to_client', 'client_approved'];
+
+  // Build the inner HTML for a past-stage card — each stage shows only its own relevant data
+  function pastStageCardHtml(order, stageId) {
+    const done = `<span style="font-size:0.7rem;color:var(--success);font-weight:700;white-space:nowrap">✓ ${state.lang === 'en' ? 'Done' : 'Дууссан'}</span>`;
+    const lbl = (txt) => `<span style="color:var(--text-light);min-width:0">${txt}</span>`;
+    const val = (txt) => `<span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(txt)}</span>`;
+    const row = (label, text) => text
+      ? `<div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:0.75rem;overflow:hidden">${lbl(label)}${val(text)}</div>`
+      : '';
+    // Author badge: Ts = admin (you), A = Ayush (colleague)
+    const authorBadge = (role) => {
+      if (!role) return '';
+      const isAdmin = role === 'admin';
+      return `<span style="font-size:0.68rem;font-weight:800;background:${isAdmin ? '#0ea5e9' : '#f97316'};color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0" title="${isAdmin ? 'Tsogt' : 'Ayush'}">${isAdmin ? 'Ts' : 'A'}</span>`;
+    };
+
+    if (stageId === 'drawing_received') {
+      // Stage 1: anchor card — show name + client + drawing version count + latest date
+      const drawings = order.drawings || [];
+      const latest = drawings.length > 0 ? drawings[drawings.length - 1] : null;
+      const versionBadge = drawings.length > 0
+        ? `<span style="font-size:0.7rem;background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:1px 7px;font-weight:700">${drawings.length} ${drawings.length === 1 ? (state.lang === 'en' ? 'version' : 'хувилбар') : (state.lang === 'en' ? 'versions' : 'хувилбар')}</span>`
+        : '';
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;margin-bottom:3px">
+          <div class="card-title" style="color:var(--text-light)">${escHtml(order.name)}</div>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage1FilledBy)}${done}</div>
+        </div>
+        <div class="card-client" style="margin-bottom:4px">
+          <span class="client-dot client-color-${getClientColor(order.client)}"></span>
+          ${escHtml(order.client)}
+        </div>
+        ${versionBadge}
+        ${latest && latest.date ? row(state.lang === 'en' ? 'Latest:' : 'Сүүлийн:', formatDate(latest.date)) : ''}
+        ${latest && latest.from ? row(state.lang === 'en' ? 'From:' : 'Илгээгч:', latest.from) : ''}
+      `;
+    }
+    if (stageId === 'review') {
+      // Stage 2: show products list + auto-calculated duration (step1 date → step3 date)
+      const products = order.reviewProducts || [];
+      const catLabel = c => ({ window: state.lang === 'en' ? 'Window' : 'Цонх', door: state.lang === 'en' ? 'Door' : 'Хаалга', facade: state.lang === 'en' ? 'Facade' : 'Фасад' }[c] || c);
+      // Auto-calculate duration: from latest drawing date to sent date (or today)
+      const drawings = order.drawings || [];
+      const latestDrawDate = drawings.length > 0 ? drawings[drawings.length - 1].date : null;
+      const endDate = order.sentDate || new Date().toISOString().split('T')[0];
+      let autoDuration = '';
+      if (latestDrawDate && endDate) {
+        const d1 = new Date(latestDrawDate), d2 = new Date(endDate);
+        const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+        if (diff >= 0) autoDuration = diff + ' ' + (state.lang === 'en' ? (diff === 1 ? 'day' : 'days') : 'өдөр');
+      }
+      const prodLines = products.length > 0
+        ? products.map(p => `<div style="font-size:0.73rem;color:var(--text);padding:1px 0">
+            <span style="font-weight:600;color:var(--primary)">${catLabel(p.category)}</span>
+            <span style="color:var(--text-light)"> · </span><span style="font-family:monospace">${escHtml(p.system || '—')}</span>
+            <span style="color:var(--text-light)"> · </span>${p.m2 ? escHtml(String(p.m2)) + ' m²' : '—'}
+            <span style="color:var(--text-light)"> · </span>${p.color ? escHtml(p.color) : '—'}
+          </div>`).join('')
+        : `<div style="font-size:0.73rem;color:var(--text-light);font-style:italic">${state.lang === 'en' ? 'No products yet' : 'Бүтээгдэхүүн байхгүй'}</div>`;
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '🔍 Review' : '🔍 Хяналт'}</span>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage2FilledBy)}${done}</div>
+        </div>
+        ${autoDuration ? row(state.lang === 'en' ? 'Duration:' : 'Хугацаа:', autoDuration) : ''}
+        <div style="margin-top:3px">${prodLines}</div>
+      `;
+    }
+    if (stageId === 'sent_to_client') {
+      // Stage 3: sent date + days waiting for client approval
+      const waitDays = order.sentDate ? daysBetween(order.sentDate) : null;
+      const waitHtml = waitDays !== null
+        ? `<div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:0.75rem;overflow:hidden">
+            ${lbl(state.lang === 'en' ? 'Waiting:' : 'Хүлээж байна:')}
+            <span style="font-weight:600;color:${waitDays >= 7 ? 'var(--danger)' : waitDays >= 4 ? '#d97706' : 'var(--success)'}">
+              ${waitDays} ${state.lang === 'en' ? (waitDays === 1 ? 'day' : 'days') : 'өдөр'}
+            </span>
+          </div>` : '';
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '📤 Sent to Client' : '📤 Захиалагчид илгээсэн'}</span>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage3FilledBy)}${done}</div>
+        </div>
+        ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.sentDate ? formatDate(order.sentDate) : '')}
+        ${waitHtml}
+        ${row(state.lang === 'en' ? 'Subject:' : 'Гарчиг:', order.sentEmailSubject)}
+      `;
+    }
+    if (stageId === 'client_approved') {
+      // Stage 4: show only approval date + email subject
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '✅ Approved' : '✅ Зөвшөөрсөн'}</span>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage4FilledBy)}${done}</div>
+        </div>
+        ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.approvedDate ? formatDate(order.approvedDate) : '')}
+        ${row(state.lang === 'en' ? 'Subject:' : 'Гарчиг:', order.approvedEmailSubject)}
+      `;
+    }
+    return '';
+  }
+
+  // Helper: build the full current-stage card HTML for an order
+  function buildCurrentCardHtml(order, stage) {
+    const days = daysBetween(order.stageDate);
+    const isStuck = days >= 7 && stage.id !== 'completed';
+    const isWarn = days >= 4 && days < 7 && stage.id !== 'completed';
+    const paid = getTotalPaid(order);
+    const remaining = getRemaining(order);
+    const descHtml = order.description ? `<div class="card-desc" title="${escHtml(order.description)}">${escHtml(order.description)}</div>` : '';
+    let metaHtml = '';
+    if (order.reviewCycles > 0) metaHtml += `<span class="badge badge-review">🔄 ${order.reviewCycles}</span>`;
+    const attachCount = (order.attachments || []).filter(a => a).length;
+    if (attachCount > 0) metaHtml += `<span class="badge" style="background:#e0f2fe;color:#0369a1">📎 ${attachCount}</span>`;
+    const totalInv = getTotalInvoiced(order);
+    if (totalInv > 0) {
+      if (remaining <= 0) metaHtml += `<span class="badge badge-payment">✅ ${formatEur(totalInv)}</span>`;
+      else if (paid > 0) metaHtml += `<span class="badge badge-unpaid">💰 ${formatEur(paid)}/${formatEur(totalInv)}</span>`;
+      else metaHtml += `<span class="badge badge-invoice">💶 ${formatEur(totalInv)}</span>`;
+    }
+    const alertClass = isStuck ? 'stuck' : isWarn ? 'warning' : '';
+    // Stage-specific extra info shown in the current-stage cell
+    let stageExtra = '';
+    if (stage.id === 'drawing_received') {
+      const drawings = order.drawings || [];
+      const latest = drawings.length > 0 ? drawings[drawings.length - 1] : null;
+      const vBadge = drawings.length > 0
+        ? `<span style="font-size:0.7rem;background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:1px 7px;font-weight:700;margin-bottom:3px;display:inline-block">${drawings.length} ${drawings.length === 1 ? (state.lang === 'en' ? 'version' : 'хувилбар') : (state.lang === 'en' ? 'versions' : 'хувилбар')}</span>` : '';
+      const dateRow = latest && latest.date ? `<div style="font-size:0.75rem;color:var(--text-light)">${state.lang === 'en' ? 'Latest:' : 'Сүүлийн:'} <span style="font-weight:500;color:var(--text)">${formatDate(latest.date)}</span></div>` : '';
+      const fromRow = latest && latest.from ? `<div style="font-size:0.75rem;color:var(--text-light)">${state.lang === 'en' ? 'From:' : 'Илгээгч:'} <span style="font-weight:500;color:var(--text)">${escHtml(latest.from)}</span></div>` : '';
+      stageExtra = vBadge + dateRow + fromRow;
+    }
+    if (stage.id === 'sent_to_client') {
+      // Days waiting for client approval since sent date
+      if (order.sentDate) {
+        const waitDays = daysBetween(order.sentDate);
+        stageExtra = `<div style="font-size:0.75rem;margin-top:2px"><span style="color:var(--text-light)">${state.lang === 'en' ? 'Sent:' : 'Илгээсэн:'}</span> <span style="font-weight:500">${formatDate(order.sentDate)}</span></div>
+          <div style="font-size:0.75rem"><span style="color:var(--text-light)">${state.lang === 'en' ? 'Waiting:' : 'Хүлээж байна:'}</span> <span style="font-weight:600;color:${waitDays >= 7 ? 'var(--danger)' : waitDays >= 4 ? 'var(--warning)' : 'var(--success)'}">${waitDays} ${state.lang === 'en' ? (waitDays === 1 ? 'day' : 'days') : 'өдөр'}</span></div>`;
+      }
+    }
+    return `<div class="order-card ${alertClass}" style="margin:0;box-shadow:none;border-radius:0;border:none;background:transparent">
+      <div class="card-title">${escHtml(order.name)}</div>
+      ${descHtml}
+      <div class="card-client">
+        <span class="client-dot client-color-${getClientColor(order.client)}"></span>
+        ${escHtml(order.client)}
+      </div>
+      <div class="card-meta">
+        <span class="card-days ${isStuck ? 'days-danger' : isWarn ? 'days-warn' : 'days-ok'}">
+          ${days} ${days === 1 ? t('day') : t('days')}
+        </span>
+        ${metaHtml}
+      </div>
+      ${stageExtra ? `<div style="margin-top:5px">${stageExtra}</div>` : ''}
+    </div>`;
+  }
+
+  // Show all 12 stages as columns so the full pipeline is always visible
+  const allColumns = STAGES;
+
+  if (orders.length === 0) {
+    board.innerHTML = `<div style="text-align:center;color:var(--text-light);font-size:0.83rem;padding:40px">${t('noOrders')}</div>`;
+    return;
+  }
+
+  // Build the CSS grid
+  const grid = document.createElement('div');
+  grid.className = 'board-grid';
+  grid.style.gridTemplateColumns = `repeat(${allColumns.length}, minmax(230px, 280px))`;
+  board.appendChild(grid);
+
+  // Header row — one cell per column
+  allColumns.forEach(stage => {
+    const countHere = orders.filter(o => o.stage === stage.id).length;
+    const hdr = document.createElement('div');
+    hdr.className = 'board-grid-header-cell';
+    hdr.innerHTML = `<span>${stage[state.lang]}</span><span class="column-count">${countHere}</span>`;
+    grid.appendChild(hdr);
+  });
+
+  // One row per order — cells across all columns
+  orders.forEach((order, orderIdx) => {
+    const orderStageIdx = STAGES.findIndex(s => s.id === order.stage);
+    const rowColor = orderIdx % 8;
+
+    allColumns.forEach(stage => {
+      const colStageIdx = STAGES.findIndex(s => s.id === stage.id);
+      const cell = document.createElement('div');
+
+      if (colStageIdx === orderStageIdx) {
+        // Current stage — full card with highlighted border
+        cell.className = `board-grid-cell cell-current row-color-${rowColor}`;
+        cell.innerHTML = buildCurrentCardHtml(order, stage);
+        cell.onclick = () => openDetailModal(order.id);
+
+      } else if (colStageIdx < orderStageIdx) {
+        // Past stage — dimmed with row color tint
+        cell.className = `board-grid-cell row-color-${rowColor}`;
+        cell.style.opacity = '0.72';
+        cell.title = state.lang === 'en' ? 'Click to view details' : 'Дэлгэрэнгүй үзэхийн тулд дарна уу';
+        // Early stages have rich summaries; later stages just show the stage name + done badge
+        if (EARLY_STAGE_IDS.includes(stage.id)) {
+          cell.innerHTML = pastStageCardHtml(order, stage.id);
+        } else {
+          cell.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
+            <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${stage[state.lang]}</span>
+            <span style="font-size:0.7rem;color:var(--success);font-weight:700;white-space:nowrap">✓ ${state.lang === 'en' ? 'Done' : 'Дууссан'}</span>
+          </div>`;
+        }
+        cell.onclick = () => openDetailModal(order.id);
+
+      } else {
+        // Future stage — empty placeholder
+        cell.className = 'board-grid-cell cell-empty';
+      }
+
+      grid.appendChild(cell);
+    });
+  });
+}
+
+function renderTable() {
+  const orders = getFilteredOrders();
+  document.getElementById('tableHead').innerHTML = `
+    <tr>
+      <th>${t('orderCol')}</th>
+      <th>${t('clientCol')}</th>
+      <th>${t('stageCol')}</th>
+      <th>${t('daysCol')}</th>
+      <th>${t('reviewCol')}</th>
+      <th>${t('invoiceCol')}</th>
+      <th>${t('paidCol')}</th>
+      <th>${t('balanceCol')}</th>
+      <th>${t('createdCol')}</th>
+    </tr>
+  `;
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  if (orders.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-light);padding:30px">${t('noOrders')}</td></tr>`;
+    return;
+  }
+  orders.forEach(o => {
+    const days = daysBetween(o.stageDate);
+    const isStuck = days >= 7 && o.stage !== 'completed';
+    const paid = getTotalPaid(o);
+    const remaining = getRemaining(o);
+    const totalInv = getTotalInvoiced(o);
+    const tr = document.createElement('tr');
+    tr.onclick = () => openDetailModal(o.id);
+    tr.innerHTML = `
+      <td><strong>${escHtml(o.name)}</strong>${o.description ? `<br><small style="color:var(--text-light)">${escHtml(o.description).substring(0, 40)}${o.description.length > 40 ? '...' : ''}</small>` : ''}</td>
+      <td><span class="client-dot client-color-${getClientColor(o.client)}"></span> ${escHtml(o.client)}</td>
+      <td>${stageName(o.stage)}</td>
+      <td><span class="card-days ${isStuck ? 'days-danger' : days >= 4 ? 'days-warn' : 'days-ok'}">${days}</span></td>
+      <td>${o.reviewCycles > 0 ? `<span class="badge badge-review">🔄 ${o.reviewCycles}</span>` : '0'}</td>
+      <td>${totalInv > 0 ? formatEur(totalInv) : '-'}</td>
+      <td style="color:var(--success)">${paid > 0 ? formatEur(paid) : '-'}</td>
+      <td style="color:${remaining > 0 ? 'var(--danger)' : remaining === 0 && totalInv > 0 ? 'var(--success)' : 'var(--text-light)'}">${totalInv > 0 ? (remaining <= 0 ? '✅' : formatEur(remaining)) : '-'}</td>
+      <td>${formatDate(o.created)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ===== MODALS =====
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function openNewOrderModal() {
+  if (state.clients.length === 0) {
+    openClientModal();
+    return;
+  }
+  document.getElementById('inputOrderName').value = '';
+  document.getElementById('inputOrderDesc').value = '';
+  document.getElementById('inputReceivedFrom').value = '';
+  document.getElementById('inputReceivedDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('inputEmailSubject').value = '';
+  document.getElementById('inputFilePath').value = '';
+  document.getElementById('inputAttach1').value = '';
+  document.getElementById('inputAttach2').value = '';
+  document.getElementById('inputAttach3').value = '';
+  openModal('newOrderModal');
+}
+
+function saveNewOrder() {
+  const name = document.getElementById('inputOrderName').value.trim();
+  const client = document.getElementById('inputOrderClient').value;
+  const desc = document.getElementById('inputOrderDesc').value.trim();
+  if (!name) return;
+
+  const receivedFrom = document.getElementById('inputReceivedFrom').value.trim();
+  const receivedDate = document.getElementById('inputReceivedDate').value;
+  const emailSubject = document.getElementById('inputEmailSubject').value.trim();
+  const filePath = document.getElementById('inputFilePath').value.trim();
+  const attachments = [
+    document.getElementById('inputAttach1').value.trim(),
+    document.getElementById('inputAttach2').value.trim(),
+    document.getElementById('inputAttach3').value.trim()
+  ].filter(a => a);
+
+  const now = new Date().toISOString();
+  state.orders.push({
+    id: state.nextOrderId++,
+    name,
+    client,
+    description: desc,
+    stage: 'drawing_received',
+    stageDate: now,
+    created: now,
+    notes: [],
+    history: [{ date: now, text: t('created') }],
+    reviewCycles: 0,
+    invoices: [],
+    nextInvoiceId: 1,
+    invoiceAmount: 0,
+    payments: [],
+    receivedFrom: receivedFrom,
+    receivedDate: receivedDate || now.split('T')[0],
+    emailSubject: emailSubject,
+    filePath: filePath,
+    attachments: attachments,
+    driveLink: '',
+    drawings: receivedFrom || receivedDate || emailSubject
+      ? [{ id: 1, date: receivedDate || now.split('T')[0], from: receivedFrom, subject: emailSubject, driveLink: '' }]
+      : [],
+    nextDrawingId: receivedFrom || receivedDate || emailSubject ? 2 : 1,
+    reviewDate: '',
+    reviewSummary: '',
+    reviewDriveLink: '',
+    sentDate: '',
+    sentEmailSubject: '',
+    sentDriveLink: '',
+    approvedDate: '',
+    approvedEmailSubject: '',
+    approvedDriveLink: ''
+  });
+  saveState();
+  closeModal('newOrderModal');
+  updateUI();
+}
+
+// ===== DETAIL MODAL WITH TABS =====
+let currentDetailTab = 'info';
+
+function openDetailModal(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  document.getElementById('detailTitle').textContent = order.name;
+
+  const days = daysBetween(order.stageDate);
+  const stageIdx = STAGES.findIndex(s => s.id === order.stage);
+  const paid = getTotalPaid(order);
+  const remaining = getRemaining(order);
+
+  // --- TAB: INFO ---
+  // Helper: render a Google Drive link cell
+  const driveCell = (link) => link
+    ? `<a href="${escHtml(link)}" target="_blank" rel="noopener" style="color:#1a73e8;font-weight:600;font-size:0.85rem">${t('openInDrive')}</a>`
+    : `<em style="color:var(--text-light)">${t('noDriveLink')}</em>`;
+
+  // Helper: show Edit button only for admin/colleague
+  const canEdit = ['admin','colleague'].includes(sessionStorage.getItem('sch_role'));
+
+  let infoHtml = `
+    <div class="detail-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h4>📋 ${t('description')}</h4>
+        ${canEdit ? `<button class="btn btn-sm" onclick="toggleEditDesc(${order.id})" id="editDescBtn">${t('editInfo')}</button>` : ''}
+      </div>
+      <div id="descDisplay">
+        ${order.description ? `<p style="font-size:0.9rem;color:var(--text);white-space:pre-wrap">${escHtml(order.description)}</p>` : `<p style="color:var(--text-light);font-style:italic">${t('descriptionPlaceholder')}</p>`}
+      </div>
+      ${canEdit ? `<div id="descEdit" style="display:none">
+        <textarea id="editDescInput" style="width:100%;min-height:80px;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.9rem">${escHtml(order.description || '')}</textarea>
+        <div style="margin-top:6px;display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-sm" onclick="toggleEditDesc(${order.id})">${t('cancel')}</button>
+          <button class="btn btn-primary btn-sm" onclick="saveDesc(${order.id})">${t('saveChanges')}</button>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <!-- STAGE 1: Drawing Received — version log -->
+    <div class="detail-section" style="background:#f0f7ff;border-color:#bfdbfe">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h4>${t('stage1Info')}</h4>
+        ${canEdit ? `<button class="btn btn-primary btn-sm" onclick="showAddDrawingForm(${order.id})">${t('addDrawingVersion')}</button>` : ''}
+      </div>
+      ${(() => {
+        const drawings = order.drawings || [];
+        if (drawings.length === 0) {
+          return `<p style="color:var(--text-light);font-size:0.83rem;font-style:italic;padding:4px 0">${t('noDrawings')}</p>`;
+        }
+        return drawings.map(d => `
+          <div id="drawRow-${d.id}" style="border-bottom:1px solid var(--border);padding:8px 0;font-size:0.83rem">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+              <span style="font-weight:700;color:var(--primary);min-width:28px">${t('drawingVersion')}${d.id}</span>
+              <div style="flex:1;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;min-width:0">
+                <span style="color:var(--text-light)">${t('receivedDate')}:</span>
+                <span>${d.date ? formatDate(d.date) : '<em style="color:var(--text-light)">—</em>'}</span>
+                <span style="color:var(--text-light)">${t('sender')}:</span>
+                <span>${d.from ? escHtml(d.from) : '<em style="color:var(--text-light)">—</em>'}</span>
+                <span style="color:var(--text-light)">${t('emailTitle')}:</span>
+                <span>${d.subject ? escHtml(d.subject) : '<em style="color:var(--text-light)">—</em>'}</span>
+                <span style="color:var(--text-light)">${t('driveLink')}:</span>
+                <span>${driveCell(d.driveLink)}</span>
+              </div>
+              ${canEdit ? `<div style="display:flex;gap:4px;flex-shrink:0">
+                <button class="btn btn-sm" style="padding:2px 8px;font-size:0.73rem" onclick="showEditDrawingForm(${order.id}, ${d.id})">${t('editInfo')}</button>
+                ${drawings.length > 1 ? `<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:0.73rem" onclick="removeDrawing(${order.id}, ${d.id})">✕</button>` : ''}
+              </div>` : ''}
+            </div>
+          </div>
+          ${canEdit ? `
+          <div id="drawEdit-${d.id}" style="display:none;background:#e8f2ff;border-radius:6px;padding:10px;margin-bottom:4px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end">
+              <div style="flex:1;min-width:110px">
+                <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('receivedDate')}</label>
+                <input type="date" id="drawEditDate-${d.id}" value="${d.date || ''}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+              </div>
+              <div style="flex:1;min-width:130px">
+                <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('sender')}</label>
+                <input type="text" id="drawEditFrom-${d.id}" value="${escHtml(d.from || '')}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+              </div>
+              <div style="flex:2;min-width:150px">
+                <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('emailTitle')}</label>
+                <input type="text" id="drawEditSubject-${d.id}" value="${escHtml(d.subject || '')}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+              </div>
+              <div style="flex:2;min-width:150px">
+                <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('driveLink')}</label>
+                <input type="url" id="drawEditDriveLink-${d.id}" value="${escHtml(d.driveLink || '')}" placeholder="${t('driveLinkPlaceholder')}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+              </div>
+              <div style="display:flex;gap:4px;align-self:flex-end">
+                <button class="btn btn-sm" onclick="showEditDrawingForm(${order.id}, ${d.id})">${t('cancel')}</button>
+                <button class="btn btn-primary btn-sm" onclick="saveEditDrawing(${order.id}, ${d.id})">${t('saveChanges')}</button>
+              </div>
+            </div>
+          </div>` : ''}
+        `).join('');
+      })()}
+      ${canEdit ? `
+      <div id="addDrawingForm" style="display:none;background:#e8f2ff;border-radius:6px;padding:10px;margin-top:8px">
+        <div style="font-size:0.8rem;font-weight:700;margin-bottom:8px;color:var(--primary)">${t('addDrawingVersion')}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end">
+          <div style="flex:1;min-width:110px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('receivedDate')}</label>
+            <input type="date" id="newDrawDate" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+          </div>
+          <div style="flex:1;min-width:130px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('sender')}</label>
+            <input type="text" id="newDrawFrom" placeholder="sender@email.com" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+          </div>
+          <div style="flex:2;min-width:150px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('emailTitle')}</label>
+            <input type="text" id="newDrawSubject" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+          </div>
+          <div style="flex:2;min-width:150px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('driveLink')}</label>
+            <input type="url" id="newDrawDriveLink" placeholder="${t('driveLinkPlaceholder')}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+          </div>
+          <div style="display:flex;gap:4px;align-self:flex-end">
+            <button class="btn btn-sm" onclick="showAddDrawingForm(${order.id})">${t('cancel')}</button>
+            <button class="btn btn-primary btn-sm" onclick="saveNewDrawing(${order.id})">${t('saveChanges')}</button>
+          </div>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <!-- STAGE 2: Review & Correction -->
+    <div class="detail-section" style="background:#fffbeb;border-color:#fde68a">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h4>${t('stage2Info')}</h4>
+      </div>
+
+      <!-- Duration row (always editable inline) -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:0.85rem">
+        <span style="color:var(--text-light);white-space:nowrap">${t('reviewDuration')}:</span>
+        ${canEdit
+          ? `<input type="number" id="editReviewDuration" value="${escHtml(order.reviewDuration || '')}"
+               min="0" step="0.5" placeholder="${t('reviewDurationPlaceholder')}"
+               style="width:90px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:0.85rem"
+               onchange="saveDuration(${order.id})">
+             <span style="color:var(--text-light);font-size:0.8rem">${state.lang === 'en' ? 'days' : 'өдөр'}</span>`
+          : `<span>${order.reviewDuration ? escHtml(String(order.reviewDuration)) + ' ' + (state.lang === 'en' ? 'days' : 'өдөр') : '<em style="color:var(--text-light)">—</em>'}</span>`
+        }
+      </div>
+
+      <!-- Schueco Products list -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:0.83rem;font-weight:700;color:var(--text)">${t('reviewProducts')}</span>
+        ${canEdit ? `<button class="btn btn-primary btn-sm" onclick="showAddProductForm(${order.id})">${t('addProduct')}</button>` : ''}
+      </div>
+      ${(() => {
+        const products = order.reviewProducts || [];
+        const catLabel = c => ({ window: t('catWindow'), door: t('catDoor'), facade: t('catFacade') }[c] || c);
+        if (products.length === 0) {
+          return `<p style="color:var(--text-light);font-size:0.83rem;font-style:italic;padding:2px 0 8px">${t('noProducts')}</p>`;
+        }
+        const finishLabel = f => f === 'fine' ? t('finishFine') : t('finishNormal');
+        return `<div style="margin-bottom:8px">` + products.map(p => `
+          <div id="prodRow-${p.id}" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:0.83rem">
+            <div style="flex:1;min-width:0;line-height:1.5">
+              <span style="font-weight:700;color:var(--primary)">${catLabel(p.category)}</span>
+              <span style="color:var(--text-light);margin:0 4px">·</span>
+              <span style="font-family:monospace;font-weight:600">${p.system ? escHtml(p.system) : '<em style="color:var(--text-light);font-family:inherit">—</em>'}</span>
+              <span style="color:var(--text-light);margin:0 4px">·</span>
+              <span>${p.m2 ? escHtml(String(p.m2)) + ' m²' : '<em style="color:var(--text-light)">—</em>'}</span>
+              <span style="color:var(--text-light);margin:0 4px">·</span>
+              <span>${p.color ? escHtml(p.color) : '<em style="color:var(--text-light)">—</em>'}</span>
+              <span style="color:var(--text-light);margin:0 4px">·</span>
+              <span style="font-size:0.76rem;background:${p.finish === 'fine' ? '#ede9fe' : '#f0fdf4'};color:${p.finish === 'fine' ? '#6d28d9' : '#15803d'};border-radius:10px;padding:1px 7px;font-weight:600">${finishLabel(p.finish || 'normal')}</span>
+            </div>
+            ${canEdit ? `<div style="display:flex;gap:4px;flex-shrink:0">
+              <button class="btn btn-sm" style="padding:2px 8px;font-size:0.73rem" onclick="showEditProductForm(${order.id}, ${p.id})">${t('editInfo')}</button>
+              <button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:0.73rem" onclick="removeProduct(${order.id}, ${p.id})">✕</button>
+            </div>` : ''}
+          </div>
+          ${canEdit ? `
+          <div id="prodEdit-${p.id}" style="display:none;background:#fef9c3;border-radius:6px;padding:10px;margin-bottom:4px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end">
+              <div style="min-width:110px">
+                <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('productCategory')}</label>
+                <select id="prodEditCat-${p.id}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+                  <option value="window" ${p.category === 'window' ? 'selected' : ''}>${t('catWindow')}</option>
+                  <option value="door" ${p.category === 'door' ? 'selected' : ''}>${t('catDoor')}</option>
+                  <option value="facade" ${p.category === 'facade' ? 'selected' : ''}>${t('catFacade')}</option>
+                </select>
+              </div>
+              <div style="flex:1;min-width:120px">
+                <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('productSystem')}</label>
+                <input type="text" id="prodEditSystem-${p.id}" value="${escHtml(p.system || '')}" placeholder="${t('productSystemPlaceholder')}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem;font-family:monospace">
+              </div>
+              <div style="min-width:80px">
+                <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('productM2')} (m²)</label>
+                <input type="number" id="prodEditM2-${p.id}" value="${p.m2 || ''}" min="0" step="0.01" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+              </div>
+              <div style="flex:2;min-width:150px">
+                <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('productColor')}</label>
+                <input type="text" id="prodEditColor-${p.id}" value="${escHtml(p.color || '')}" placeholder="${t('productColorPlaceholder')}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+              </div>
+              <div style="min-width:130px">
+                <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('productFinish')}</label>
+                <select id="prodEditFinish-${p.id}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+                  <option value="normal" ${(p.finish || 'normal') === 'normal' ? 'selected' : ''}>${t('finishNormal')}</option>
+                  <option value="fine" ${p.finish === 'fine' ? 'selected' : ''}>${t('finishFine')}</option>
+                </select>
+              </div>
+              <div style="display:flex;gap:4px;align-self:flex-end">
+                <button class="btn btn-sm" onclick="showEditProductForm(${order.id}, ${p.id})">${t('cancel')}</button>
+                <button class="btn btn-primary btn-sm" onclick="saveEditProduct(${order.id}, ${p.id})">${t('saveChanges')}</button>
+              </div>
+            </div>
+          </div>` : ''}
+        `).join('') + `</div>`;
+      })()}
+
+      <!-- Add product form -->
+      ${canEdit ? `
+      <div id="addProductForm" style="display:none;background:#fef9c3;border-radius:6px;padding:10px;margin-top:4px">
+        <div style="font-size:0.8rem;font-weight:700;margin-bottom:8px;color:#92400e">${t('addProduct')}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end">
+          <div style="min-width:110px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('productCategory')}</label>
+            <select id="newProdCat" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+              <option value="window">${t('catWindow')}</option>
+              <option value="door">${t('catDoor')}</option>
+              <option value="facade">${t('catFacade')}</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('productSystem')}</label>
+            <input type="text" id="newProdSystem" placeholder="${t('productSystemPlaceholder')}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem;font-family:monospace">
+          </div>
+          <div style="min-width:80px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('productM2')} (m²)</label>
+            <input type="number" id="newProdM2" min="0" step="0.01" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+          </div>
+          <div style="flex:2;min-width:150px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('productColor')}</label>
+            <input type="text" id="newProdColor" placeholder="${t('productColorPlaceholder')}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+          </div>
+          <div style="min-width:130px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('productFinish')}</label>
+            <select id="newProdFinish" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+              <option value="normal">${t('finishNormal')}</option>
+              <option value="fine">${t('finishFine')}</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:4px;align-self:flex-end">
+            <button class="btn btn-sm" onclick="showAddProductForm(${order.id})">${t('cancel')}</button>
+            <button class="btn btn-primary btn-sm" onclick="saveNewProduct(${order.id})">${t('saveChanges')}</button>
+          </div>
+        </div>
+      </div>` : ''}
+
+      <!-- Correction notes (simple inline edit) -->
+      ${canEdit ? `
+      <div style="margin-top:12px">
+        <label style="font-size:0.78rem;font-weight:600;color:var(--text-light);display:block;margin-bottom:4px">${t('reviewSummary')}</label>
+        <textarea id="editReviewSummary" placeholder="${t('reviewSummaryPlaceholder')}"
+          style="width:100%;min-height:55px;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.83rem;resize:vertical"
+          onchange="saveSummary(${order.id})">${escHtml(order.reviewSummary || '')}</textarea>
+      </div>` : order.reviewSummary ? `
+      <div style="margin-top:10px;font-size:0.83rem">
+        <span style="color:var(--text-light)">${t('reviewSummary')}: </span>
+        <span style="white-space:pre-wrap">${escHtml(order.reviewSummary)}</span>
+      </div>` : ''}
+    </div>
+
+    <!-- STAGE 3: Sent to Client -->
+    <div class="detail-section" style="background:#f0fdf4;border-color:#bbf7d0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h4>${t('stage3Info')}</h4>
+        ${canEdit ? `<button class="btn btn-sm" onclick="toggleEditStage3(${order.id})">${t('editInfo')}</button>` : ''}
+      </div>
+      <div id="stage3Display">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.85rem">
+          <span style="color:var(--text-light)">${t('sentDate')}:</span>
+          <span>${order.sentDate ? formatDate(order.sentDate) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('emailTitle')}:</span>
+          <span>${order.sentEmailSubject ? escHtml(order.sentEmailSubject) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('driveLink')}:</span>
+          <span>${driveCell(order.sentDriveLink)}</span>
+        </div>
+      </div>
+      ${canEdit ? `<div id="stage3Edit" style="display:none">
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('sentDate')}</label>
+          <input type="date" id="editSentDate" value="${order.sentDate ? order.sentDate.split('T')[0] : ''}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('sentEmailSubject')}</label>
+          <input type="text" id="editSentEmailSubject" value="${escHtml(order.sentEmailSubject || '')}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('driveLink')}</label>
+          <input type="url" id="editSentDriveLink" value="${escHtml(order.sentDriveLink || '')}" placeholder="${t('driveLinkPlaceholder')}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-sm" onclick="toggleEditStage3(${order.id})">${t('cancel')}</button>
+          <button class="btn btn-primary btn-sm" onclick="saveStage3(${order.id})">${t('saveChanges')}</button>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <!-- STAGE 4: Client Approved -->
+    <div class="detail-section" style="background:#f0fff4;border-color:#86efac">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h4>${t('stage4Info')}</h4>
+        ${canEdit ? `<button class="btn btn-sm" onclick="toggleEditStage4(${order.id})">${t('editInfo')}</button>` : ''}
+      </div>
+      <div id="stage4Display">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.85rem">
+          <span style="color:var(--text-light)">${t('approvedDate')}:</span>
+          <span>${order.approvedDate ? formatDate(order.approvedDate) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('emailTitle')}:</span>
+          <span>${order.approvedEmailSubject ? escHtml(order.approvedEmailSubject) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('driveLink')}:</span>
+          <span>${driveCell(order.approvedDriveLink)}</span>
+        </div>
+      </div>
+      ${canEdit ? `<div id="stage4Edit" style="display:none">
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('approvedDate')}</label>
+          <input type="date" id="editApprovedDate" value="${order.approvedDate ? order.approvedDate.split('T')[0] : ''}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('approvedEmailSubject')}</label>
+          <input type="text" id="editApprovedEmailSubject" value="${escHtml(order.approvedEmailSubject || '')}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('driveLink')}</label>
+          <input type="url" id="editApprovedDriveLink" value="${escHtml(order.approvedDriveLink || '')}" placeholder="${t('driveLinkPlaceholder')}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-sm" onclick="toggleEditStage4(${order.id})">${t('cancel')}</button>
+          <button class="btn btn-primary btn-sm" onclick="saveStage4(${order.id})">${t('saveChanges')}</button>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <div class="detail-section">
+      <h4>🔄 ${t('reviewCycles')}</h4>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="review-badge">🔄 ${order.reviewCycles} ${order.reviewCycles === 1 ? t('revision') : t('revisions')}</span>
+        <span style="font-size:0.8rem;color:var(--text-light)">${order.reviewCycles === 0 ? (state.lang === 'en' ? 'No revisions yet' : 'Засвар хараахан хийгдээгүй') : ''}</span>
+      </div>
+    </div>
+    ${canEdit ? `
+    <div style="margin-top:10px">
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <textarea id="noteInput" placeholder="${t('enterNote')}" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.85rem;resize:none;height:36px"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="addNote(${order.id})">${t('addNote')}</button>
+      </div>
+    </div>` : ''}
+  `;
+
+  // Notes
+  if ((order.notes || []).length > 0) {
+    infoHtml += `<h4 style="margin:8px 0 6px">${t('notes')}</h4>`;
+    (order.notes || []).slice().reverse().forEach(n => {
+      infoHtml += `<div class="note-item"><div class="note-date">${formatDate(n.date)}</div>${escHtml(n.text)}</div>`;
+    });
+  }
+
+  // --- TAB: FINANCE ---
+  const isAdminFin = sessionStorage.getItem('sch_role') === 'admin';
+  const totalInvoiced = getTotalInvoiced(order);
+  const orderInvoices = order.invoices || [];
+
+  let financeHtml = `
+    <div class="detail-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h4>💶 ${t('invoicesSection')}</h4>
+        ${isAdminFin ? `<button class="btn btn-primary btn-sm" onclick="showAddInvoiceForm(${order.id})">+ ${t('addInvoice')}</button>` : ''}
+      </div>
+      ${orderInvoices.length === 0
+        ? `<p style="color:var(--text-light);font-size:0.83rem;font-style:italic;padding:4px 0">${t('noInvoices')}</p>`
+        : orderInvoices.map(inv => `
+            <div id="invRow-${inv.id}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:0.83rem;gap:8px;flex-wrap:wrap">
+              <span style="font-weight:700;color:var(--primary);min-width:46px">INV-${inv.id}</span>
+              <span style="font-weight:700;min-width:80px">${formatEur(inv.amount)}</span>
+              <span style="color:var(--text-light);min-width:78px">${inv.date ? formatDate(inv.date) : '—'}</span>
+              <span style="flex:1;color:var(--text-light);font-style:${inv.note ? 'normal' : 'italic'}">${inv.note ? escHtml(inv.note) : '—'}</span>
+              ${isAdminFin ? `
+                <button class="btn btn-sm" style="padding:2px 8px;font-size:0.73rem" onclick="showEditInvoiceForm(${order.id}, ${inv.id})">${t('editInfo')}</button>
+                <button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:0.73rem" onclick="removeInvoice(${order.id}, ${inv.id})">✕</button>
+              ` : ''}
+            </div>
+            ${isAdminFin ? `
+            <div id="invEdit-${inv.id}" style="display:none;background:#f0f7ff;border-radius:6px;padding:10px;margin-bottom:4px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end">
+                <div style="flex:1;min-width:90px">
+                  <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('invoiceAmount2')}</label>
+                  <input type="number" id="invEditAmount-${inv.id}" value="${inv.amount}" min="0" step="0.01"
+                    style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+                </div>
+                <div style="flex:1;min-width:90px">
+                  <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('invoiceDate')}</label>
+                  <input type="date" id="invEditDate-${inv.id}" value="${inv.date || ''}"
+                    style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+                </div>
+                <div style="flex:2;min-width:120px">
+                  <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('invoiceNote')}</label>
+                  <input type="text" id="invEditNote-${inv.id}" value="${escHtml(inv.note || '')}"
+                    style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem"
+                    placeholder="${t('invoiceNotePlaceholder')}">
+                </div>
+                <div style="display:flex;gap:4px;align-self:flex-end">
+                  <button class="btn btn-sm" onclick="showEditInvoiceForm(${order.id}, ${inv.id})">${t('cancel')}</button>
+                  <button class="btn btn-primary btn-sm" onclick="saveEditInvoice(${order.id}, ${inv.id})">${t('saveChanges')}</button>
+                </div>
+              </div>
+            </div>` : ''}
+          `).join('')
+      }
+      ${orderInvoices.length > 0 ? `
+      <div class="finance-row total" style="margin-top:10px">
+        <span>${t('invoiceTotal')}:</span>
+        <strong>${formatEur(totalInvoiced)}</strong>
+      </div>` : ''}
+      ${isAdminFin ? `
+      <div id="addInvoiceForm" style="display:none;background:#f0f7ff;border-radius:6px;padding:10px;margin-top:10px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end">
+          <div style="flex:1;min-width:90px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('invoiceAmount2')}</label>
+            <input type="number" id="newInvAmount" min="0" step="0.01"
+              style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem" placeholder="0.00">
+          </div>
+          <div style="flex:1;min-width:90px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('invoiceDate')}</label>
+            <input type="date" id="newInvDate" value="${new Date().toISOString().split('T')[0]}"
+              style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem">
+          </div>
+          <div style="flex:2;min-width:120px">
+            <label style="font-size:0.73rem;font-weight:600;display:block;margin-bottom:2px">${t('invoiceNote')}</label>
+            <input type="text" id="newInvNote"
+              style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem"
+              placeholder="${t('invoiceNotePlaceholder')}">
+          </div>
+          <div style="display:flex;gap:4px;align-self:flex-end">
+            <button class="btn btn-sm" onclick="showAddInvoiceForm(${order.id})">${t('cancel')}</button>
+            <button class="btn btn-success btn-sm" onclick="saveNewInvoice(${order.id})">${t('saveChanges')}</button>
+          </div>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <div class="detail-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <h4>💰 ${t('payments')}</h4>
+      </div>
+      ${renderPaymentProgress(order)}
+      <div class="finance-row"><span>${t('totalPaid')}:</span><span style="color:var(--success);font-weight:600">${formatEur(paid)}</span></div>
+      <div class="finance-row total">
+        <span>${t('remaining')}:</span>
+        <span class="${remaining <= 0 && totalInvoiced > 0 ? 'paid-full' : 'remaining'}">
+          ${remaining <= 0 && totalInvoiced > 0 ? `✅ ${t('paidInFull')}` : formatEur(remaining)}
+        </span>
+      </div>
+      ${order.payments.length > 0 ? order.payments.map((p, i) => `
+        <div class="payment-item">
+          <div>
+            <div>${formatDate(p.date)}</div>
+            ${p.note ? `<div style="font-size:0.75rem;color:var(--text-light)">${escHtml(p.note)}</div>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <strong style="color:var(--success)">${formatEur(p.amount)}</strong>
+            ${isAdminFin ? `<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:0.7rem" onclick="removePayment(${order.id}, ${i})">✕</button>` : ''}
+          </div>
+        </div>
+      `).join('') : `<p style="color:var(--text-light);font-size:0.83rem;padding:8px 0">${t('noPayments')}</p>`}
+      ${isAdminFin ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end">
+          <div style="flex:1;min-width:100px">
+            <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:2px">${t('paymentAmount')}</label>
+            <input type="number" id="payAmount" min="0" step="0.01" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem" placeholder="0.00">
+          </div>
+          <div style="flex:1;min-width:100px">
+            <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:2px">${t('paymentDate')}</label>
+            <input type="date" id="payDate" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem">
+          </div>
+          <div style="flex:1;min-width:100px">
+            <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:2px">${t('paymentNote')}</label>
+            <input type="text" id="payNote" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem" placeholder="">
+          </div>
+          <button class="btn btn-success btn-sm" onclick="addPayment(${order.id})">${t('addPayment')}</button>
+        </div>
+      </div>` : ''}
+    </div>
+  `;
+
+  // --- TAB: HISTORY ---
+  let historyHtml = `<ul class="history-list">`;
+  (order.history || []).slice().reverse().forEach(h => {
+    historyHtml += `<li class="history-item"><span class="history-date">${formatDate(h.date)}</span><span class="history-text">${escHtml(h.text)}</span></li>`;
+  });
+  historyHtml += '</ul>';
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-stage">${t('stage')}: ${stageName(order.stage)} — <span class="card-days ${days >= 7 ? 'days-danger' : days >= 4 ? 'days-warn' : 'days-ok'}">${days} ${t('daysHere')}</span></div>
+    <p style="margin-bottom:12px"><strong>${t('client')}:</strong> <span class="client-dot client-color-${getClientColor(order.client)}"></span> ${escHtml(order.client)}</p>
+
+    <div class="detail-tabs">
+      <div class="detail-tab ${currentDetailTab === 'info' ? 'active' : ''}" onclick="switchTab('info', ${order.id})">📋 ${t('info')}</div>
+      <div class="detail-tab ${currentDetailTab === 'finance' ? 'active' : ''}" onclick="switchTab('finance', ${order.id})">💰 ${t('finance')}</div>
+      <div class="detail-tab ${currentDetailTab === 'history' ? 'active' : ''}" onclick="switchTab('history', ${order.id})">📜 ${t('history')}</div>
+    </div>
+    <div class="tab-content ${currentDetailTab === 'info' ? 'active' : ''}" id="tabInfo">${infoHtml}</div>
+    <div class="tab-content ${currentDetailTab === 'finance' ? 'active' : ''}" id="tabFinance">${financeHtml}</div>
+    <div class="tab-content ${currentDetailTab === 'history' ? 'active' : ''}" id="tabHistory">${historyHtml}</div>
+  `;
+
+  // Footer buttons — role-dependent
+  const _footerRole = sessionStorage.getItem('sch_role');
+  const COLLEAGUE_MAX = 3; // client_approved is stage index 3
+  let footerHtml = '';
+  if (_footerRole === 'admin') {
+    // Admin: full navigation + delete + send back for review
+    if (stageIdx > 0) {
+      footerHtml += `<button class="btn" onclick="moveOrder(${order.id}, -1)">${t('prevStage')}</button>`;
+    }
+    if (stageIdx >= 2) {
+      footerHtml += `<button class="btn btn-warning btn-sm" onclick="sendBackForReview(${order.id})">${t('sendBackReview')}</button>`;
+    }
+    footerHtml += `<button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">${t('deleteOrder')}</button>`;
+    if (stageIdx < STAGES.length - 1) {
+      footerHtml += `<button class="btn btn-primary" onclick="moveOrder(${order.id}, 1)">${t('nextStage')}</button>`;
+    }
+  } else if (_footerRole === 'colleague') {
+    // Colleague: prev/next within stages 0–3 only, no delete, no send-back
+    if (stageIdx > 0 && stageIdx <= COLLEAGUE_MAX) {
+      footerHtml += `<button class="btn" onclick="moveOrder(${order.id}, -1)">${t('prevStage')}</button>`;
+    }
+    if (stageIdx < COLLEAGUE_MAX) {
+      footerHtml += `<button class="btn btn-primary" onclick="moveOrder(${order.id}, 1)">${t('nextStage')}</button>`;
+    }
+  }
+  // client role: no footer buttons
+  document.getElementById('detailFooter').innerHTML = footerHtml;
+  openModal('detailModal');
+}
+
+function renderPaymentProgress(order) {
+  const totalInvoiced = getTotalInvoiced(order);
+  if (totalInvoiced <= 0) return '';
+  const paid = getTotalPaid(order);
+  const pct = Math.min(100, Math.round((paid / totalInvoiced) * 100));
+  const color = pct >= 100 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+  return `
+    <div style="margin:8px 0 12px">
+      <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:3px">
+        <span>${pct}%</span>
+        <span>${formatEur(paid)} / ${formatEur(totalInvoiced)}</span>
+      </div>
+      <div style="background:#e5e7eb;border-radius:6px;height:8px;overflow:hidden">
+        <div style="background:${color};height:100%;width:${pct}%;border-radius:6px;transition:width 0.3s"></div>
+      </div>
+    </div>
+  `;
+}
+
+function switchTab(tab, orderId) {
+  currentDetailTab = tab;
+  openDetailModal(orderId);
+}
+
+// ===== ACTIONS =====
+function moveOrder(orderId, direction) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  const idx = STAGES.findIndex(s => s.id === order.stage);
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= STAGES.length) return;
+  // Colleague can only move within stages 0–3 (drawing_received → client_approved)
+  const _moveRole = sessionStorage.getItem('sch_role');
+  if (_moveRole === 'colleague' && (newIdx > 3 || idx > 3)) return;
+
+  order.stage = STAGES[newIdx].id;
+  order.stageDate = new Date().toISOString();
+  if (!order.history) order.history = [];
+  order.history.push({ date: order.stageDate, text: `${t('movedTo')} ${stageName(order.stage)}` });
+  saveState();
+  closeModal('detailModal');
+  updateUI();
+}
+
+function sendBackForReview(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  order.reviewCycles = (order.reviewCycles || 0) + 1;
+  order.stage = 'review';
+  order.stageDate = new Date().toISOString();
+  if (!order.history) order.history = [];
+  order.history.push({ date: order.stageDate, text: `${t('sentBackReview')} (#${order.reviewCycles})` });
+  saveState();
+  closeModal('detailModal');
+  updateUI();
+}
+
+function addNote(orderId) {
+  const input = document.getElementById('noteInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  const now = new Date().toISOString();
+  if (!order.notes) order.notes = [];
+  if (!order.history) order.history = [];
+  order.notes.push({ date: now, text });
+  order.history.push({ date: now, text: `${t('noteAdded')}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}` });
+  saveState();
+  openDetailModal(orderId);
+}
+
+function addPayment(orderId) {
+  const amountEl = document.getElementById('payAmount');
+  const dateEl = document.getElementById('payDate');
+  const noteEl = document.getElementById('payNote');
+  const amount = parseFloat(amountEl.value);
+  if (!amount || amount <= 0) return;
+  const date = dateEl.value || new Date().toISOString().split('T')[0];
+  const note = noteEl.value.trim();
+
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  if (!order.payments) order.payments = [];
+  if (!order.history) order.history = [];
+  order.payments.push({ date: new Date(date).toISOString(), amount, note });
+  order.history.push({ date: new Date().toISOString(), text: `💰 ${state.lang === 'en' ? 'Payment received' : 'Төлбөр хүлээн авсан'}: ${formatEur(amount)}${note ? ' - ' + note : ''}` });
+  saveState();
+  currentDetailTab = 'finance';
+  openDetailModal(orderId);
+}
+
+function removePayment(orderId, paymentIdx) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  if (!order.payments) order.payments = [];
+  if (!order.history) order.history = [];
+  const p = order.payments[paymentIdx];
+  order.payments.splice(paymentIdx, 1);
+  order.history.push({ date: new Date().toISOString(), text: `💰 ${state.lang === 'en' ? 'Payment removed' : 'Төлбөр хасагдсан'}: ${formatEur(p.amount)}` });
+  saveState();
+  currentDetailTab = 'finance';
+  openDetailModal(orderId);
+}
+
+function toggleEditDesc(orderId) {
+  const display = document.getElementById('descDisplay');
+  const edit = document.getElementById('descEdit');
+  if (edit.style.display === 'none') {
+    edit.style.display = 'block';
+    display.style.display = 'none';
+  } else {
+    edit.style.display = 'none';
+    display.style.display = 'block';
+  }
+}
+
+function saveDesc(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  order.description = document.getElementById('editDescInput').value.trim();
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+
+// ===== STAGE SECTION TOGGLE/SAVE HELPERS =====
+function _toggleStageSection(displayId, editId) {
+  const display = document.getElementById(displayId);
+  const edit = document.getElementById(editId);
+  if (!edit) return;
+  if (edit.style.display === 'none') {
+    edit.style.display = 'block';
+    display.style.display = 'none';
+  } else {
+    edit.style.display = 'none';
+    display.style.display = 'block';
+  }
+}
+
+// Stage 1: Drawing Received — version log CRUD
+function showAddDrawingForm(orderId) {
+  const form = document.getElementById('addDrawingForm');
+  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+function saveNewDrawing(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  const date = document.getElementById('newDrawDate').value;
+  const from = document.getElementById('newDrawFrom').value.trim();
+  const subject = document.getElementById('newDrawSubject').value.trim();
+  const driveLink = document.getElementById('newDrawDriveLink').value.trim();
+  if (!date && !from && !subject) return; // need at least something
+  if (!order.drawings) order.drawings = [];
+  if (!order.history) order.history = [];
+  const newDraw = { id: order.nextDrawingId++, date, from, subject, driveLink };
+  order.drawings.push(newDraw);
+  order.stage1FilledBy = sessionStorage.getItem('sch_role') || '';
+  order.history.push({ date: new Date().toISOString(), text: `📥 ${state.lang === 'en' ? 'Drawing version added' : 'Зургийн хувилбар нэмэгдсэн'}: V${newDraw.id}${date ? ' ' + date : ''}${from ? ' · ' + from : ''}` });
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+function removeDrawing(orderId, drawingId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  if (!order.drawings || order.drawings.length <= 1) return; // keep at least one
+  if (!order.history) order.history = [];
+  const d = order.drawings.find(x => x.id === drawingId);
+  order.drawings = order.drawings.filter(x => x.id !== drawingId);
+  order.history.push({ date: new Date().toISOString(), text: `📥 ${state.lang === 'en' ? 'Drawing version removed' : 'Зургийн хувилбар хасагдсан'}: V${drawingId}` });
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+function showEditDrawingForm(orderId, drawingId) {
+  const row = document.getElementById(`drawRow-${drawingId}`);
+  const editForm = document.getElementById(`drawEdit-${drawingId}`);
+  if (!row || !editForm) return;
+  const isHidden = editForm.style.display === 'none';
+  editForm.style.display = isHidden ? 'block' : 'none';
+}
+function saveEditDrawing(orderId, drawingId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  const d = (order.drawings || []).find(x => x.id === drawingId);
+  if (!d) return;
+  if (!order.history) order.history = [];
+  d.date = document.getElementById(`drawEditDate-${drawingId}`).value;
+  d.from = document.getElementById(`drawEditFrom-${drawingId}`).value.trim();
+  d.subject = document.getElementById(`drawEditSubject-${drawingId}`).value.trim();
+  d.driveLink = document.getElementById(`drawEditDriveLink-${drawingId}`).value.trim();
+  order.stage1FilledBy = sessionStorage.getItem('sch_role') || '';
+  order.history.push({ date: new Date().toISOString(), text: `📥 ${state.lang === 'en' ? 'Drawing version updated' : 'Зургийн хувилбар засагдсан'}: V${drawingId}` });
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+
+// Stage 2: Review — inline duration + product CRUD
+function saveDuration(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  order.reviewDuration = document.getElementById('editReviewDuration').value.trim();
+  order.stage2FilledBy = sessionStorage.getItem('sch_role') || '';
+  saveState();
+}
+function saveSummary(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  order.reviewSummary = document.getElementById('editReviewSummary').value.trim();
+  order.stage2FilledBy = sessionStorage.getItem('sch_role') || '';
+  saveState();
+}
+function showAddProductForm(orderId) {
+  const form = document.getElementById('addProductForm');
+  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+function saveNewProduct(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  const category = document.getElementById('newProdCat').value;
+  const system = document.getElementById('newProdSystem').value.trim();
+  const m2 = parseFloat(document.getElementById('newProdM2').value) || 0;
+  const color = document.getElementById('newProdColor').value.trim();
+  const finish = document.getElementById('newProdFinish').value;
+  if (!system && !m2 && !color) return;
+  if (!order.reviewProducts) order.reviewProducts = [];
+  if (!order.history) order.history = [];
+  const p = { id: order.nextProductId++, category, system, m2, color, finish };
+  order.reviewProducts.push(p);
+  order.stage2FilledBy = sessionStorage.getItem('sch_role') || '';
+  order.history.push({ date: new Date().toISOString(), text: `🔍 ${state.lang === 'en' ? 'Product added' : 'Бүтээгдэхүүн нэмэгдсэн'}: ${system || category}${m2 ? ' ' + m2 + 'm²' : ''}` });
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+function removeProduct(orderId, productId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  if (!order.history) order.history = [];
+  const p = (order.reviewProducts || []).find(x => x.id === productId);
+  order.reviewProducts = (order.reviewProducts || []).filter(x => x.id !== productId);
+  order.history.push({ date: new Date().toISOString(), text: `🔍 ${state.lang === 'en' ? 'Product removed' : 'Бүтээгдэхүүн хасагдсан'}: ${p ? (p.system || p.category) : productId}` });
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+function showEditProductForm(orderId, productId) {
+  const editForm = document.getElementById(`prodEdit-${productId}`);
+  if (!editForm) return;
+  editForm.style.display = editForm.style.display === 'none' ? 'block' : 'none';
+}
+function saveEditProduct(orderId, productId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  const p = (order.reviewProducts || []).find(x => x.id === productId);
+  if (!p) return;
+  if (!order.history) order.history = [];
+  p.category = document.getElementById(`prodEditCat-${productId}`).value;
+  p.system = document.getElementById(`prodEditSystem-${productId}`).value.trim();
+  p.m2 = parseFloat(document.getElementById(`prodEditM2-${productId}`).value) || 0;
+  p.color = document.getElementById(`prodEditColor-${productId}`).value.trim();
+  p.finish = document.getElementById(`prodEditFinish-${productId}`).value;
+  order.stage2FilledBy = sessionStorage.getItem('sch_role') || '';
+  order.history.push({ date: new Date().toISOString(), text: `🔍 ${state.lang === 'en' ? 'Product updated' : 'Бүтээгдэхүүн засагдсан'}: ${p.system || p.category}` });
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+
+// Stage 3: Sent to Client
+function toggleEditStage3(orderId) { _toggleStageSection('stage3Display', 'stage3Edit'); }
+function saveStage3(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  order.sentDate = document.getElementById('editSentDate').value;
+  order.sentEmailSubject = document.getElementById('editSentEmailSubject').value.trim();
+  order.sentDriveLink = document.getElementById('editSentDriveLink').value.trim();
+  order.stage3FilledBy = sessionStorage.getItem('sch_role') || '';
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+
+// Stage 4: Client Approved
+function toggleEditStage4(orderId) { _toggleStageSection('stage4Display', 'stage4Edit'); }
+function saveStage4(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  order.approvedDate = document.getElementById('editApprovedDate').value;
+  order.approvedEmailSubject = document.getElementById('editApprovedEmailSubject').value.trim();
+  order.approvedDriveLink = document.getElementById('editApprovedDriveLink').value.trim();
+  order.stage4FilledBy = sessionStorage.getItem('sch_role') || '';
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+
+// ===== MULTI-INVOICE CRUD =====
+
+function showAddInvoiceForm(orderId) {
+  if (sessionStorage.getItem('sch_role') !== 'admin') return;
+  const form = document.getElementById('addInvoiceForm');
+  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveNewInvoice(orderId) {
+  if (sessionStorage.getItem('sch_role') !== 'admin') return;
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  const amount = parseFloat(document.getElementById('newInvAmount').value);
+  if (!amount || amount <= 0) return;
+  const date = document.getElementById('newInvDate').value || new Date().toISOString().split('T')[0];
+  const note = document.getElementById('newInvNote').value.trim();
+  if (!order.invoices) order.invoices = [];
+  if (!order.history) order.history = [];
+  const newInv = { id: order.nextInvoiceId++, amount, date, note };
+  order.invoices.push(newInv);
+  order.history.push({ date: new Date().toISOString(), text: `💶 ${state.lang === 'en' ? 'Invoice added' : 'Нэхэмжлэл нэмэгдсэн'}: INV-${newInv.id} ${formatEur(amount)}` });
+  saveState();
+  currentDetailTab = 'finance';
+  openDetailModal(orderId);
+}
+
+function removeInvoice(orderId, invoiceId) {
+  if (sessionStorage.getItem('sch_role') !== 'admin') return;
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  if (!order.invoices) order.invoices = [];
+  if (!order.history) order.history = [];
+  const inv = order.invoices.find(i => i.id === invoiceId);
+  if (!inv) return;
+  order.invoices = order.invoices.filter(i => i.id !== invoiceId);
+  order.history.push({ date: new Date().toISOString(), text: `💶 ${state.lang === 'en' ? 'Invoice removed' : 'Нэхэмжлэл хасагдсан'}: INV-${invoiceId} ${formatEur(inv.amount)}` });
+  saveState();
+  currentDetailTab = 'finance';
+  openDetailModal(orderId);
+}
+
+function showEditInvoiceForm(orderId, invoiceId) {
+  if (sessionStorage.getItem('sch_role') !== 'admin') return;
+  const row = document.getElementById(`invRow-${invoiceId}`);
+  const editForm = document.getElementById(`invEdit-${invoiceId}`);
+  if (!row || !editForm) return;
+  const isHidden = editForm.style.display === 'none';
+  row.style.display = isHidden ? 'none' : 'flex';
+  editForm.style.display = isHidden ? 'block' : 'none';
+}
+
+function saveEditInvoice(orderId, invoiceId) {
+  if (sessionStorage.getItem('sch_role') !== 'admin') return;
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  const inv = order.invoices.find(i => i.id === invoiceId);
+  if (!inv) return;
+  const amount = parseFloat(document.getElementById(`invEditAmount-${invoiceId}`).value);
+  if (!amount || amount <= 0) return;
+  const date = document.getElementById(`invEditDate-${invoiceId}`).value;
+  const note = document.getElementById(`invEditNote-${invoiceId}`).value.trim();
+  if (!order.history) order.history = [];
+  const oldAmount = inv.amount;
+  inv.amount = amount;
+  if (date) inv.date = date;
+  inv.note = note;
+  order.history.push({ date: new Date().toISOString(), text: `💶 ${state.lang === 'en' ? 'Invoice updated' : 'Нэхэмжлэл засагдсан'}: INV-${invoiceId} ${formatEur(oldAmount)} → ${formatEur(amount)}` });
+  saveState();
+  currentDetailTab = 'finance';
+  openDetailModal(orderId);
+}
+
+function deleteOrder(orderId) {
+  if (!confirm(t('confirmDelete'))) return;
+  state.orders = state.orders.filter(o => o.id !== orderId);
+  saveState();
+  closeModal('detailModal');
+  updateUI();
+}
+
+// ===== CLIENTS =====
+function openClientModal() {
+  const body = document.getElementById('clientBody');
+  if (state.clients.length === 0) {
+    body.innerHTML = `<p style="color:var(--text-light);text-align:center;padding:16px">${t('noClients')}</p>`;
+  } else {
+    body.innerHTML = state.clients.map((c, i) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span><span class="client-dot client-color-${i % 8}"></span> ${escHtml(c)}</span>
+        <button class="btn btn-danger btn-sm" onclick="removeClient('${escHtml(c)}')">${t('removeClient')}</button>
+      </div>
+    `).join('');
+  }
+  openModal('clientModal');
+}
+
+function addClient() {
+  const input = document.getElementById('newClientName');
+  const name = input.value.trim();
+  if (!name || state.clients.includes(name)) return;
+  state.clients.push(name);
+  input.value = '';
+  saveState();
+  updateUI();
+  openClientModal();
+}
+
+function removeClient(name) {
+  const hasOrders = state.orders.some(o => o.client === name);
+  if (hasOrders) {
+    alert(state.lang === 'en' ? 'Cannot remove client with active orders.' : 'Идэвхтэй захиалгатай захиалагчийг устгах боломжгүй.');
+    return;
+  }
+  state.clients = state.clients.filter(c => c !== name);
+  saveState();
+  updateUI();
+  openClientModal();
+}
+
+// ===== EXPORT / IMPORT =====
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sales-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.orders && data.clients) {
+        migrateOrders(data.orders);
+        state = data;
+        saveState();
+        updateUI();
+        alert(state.lang === 'en' ? 'Data imported successfully!' : 'Мэдээлэл амжилттай импортлогдлоо!');
+      }
+    } catch(err) {
+      alert('Invalid file format');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ===== UTIL =====
+function escHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('active');
+  });
+});
+
+// Keyboard shortcut
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+  }
+});
+
+// ===== INIT =====
+loadState();
+updateUI();
+setupFirebaseSync();
+</script>
+</body>
+</html>
