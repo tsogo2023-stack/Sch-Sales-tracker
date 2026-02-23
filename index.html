@@ -736,6 +736,17 @@ const TRANSLATIONS = {
     stage2Info: '🔍 Stage 2: Review & Correction',
     stage3Info: '📤 Stage 3: Sent to Client',
     stage4Info: '✅ Stage 4: Client Approved',
+    stage5Info: '🇩🇪 Stage 5: Sent to DE/GE',
+    stage6Info: '📊 Stage 6: Calculation Received',
+    stage7Info: '🇲🇳 Stage 7: Forwarded to MN Client',
+    abroadDate: 'Date Sent',
+    abroadTo: 'Sent To',
+    abroadEmailSubject: 'Email Subject',
+    calcDate: 'Date Received',
+    calcFrom: 'Received From',
+    forwardDate: 'Date Forwarded',
+    forwardTo: 'Forwarded To',
+    forwardEmailSubject: 'Email Subject',
     driveLink: 'Google Drive Link',
     driveLinkPlaceholder: 'Paste Google Drive shareable link here...',
     openInDrive: '📂 Open in Drive',
@@ -872,6 +883,17 @@ const TRANSLATIONS = {
     stage2Info: '🔍 2-р шат: Хянах & Засах',
     stage3Info: '📤 3-р шат: Захиалагчид илгээсэн',
     stage4Info: '✅ 4-р шат: Захиалагч зөвшөөрсөн',
+    stage5Info: '🇩🇪 5-р шат: Герман/Гүрж руу илгээсэн',
+    stage6Info: '📊 6-р шат: Тооцоо хүлээн авсан',
+    stage7Info: '🇲🇳 7-р шат: МН захиалагчид дамжуулсан',
+    abroadDate: 'Илгээсэн огноо',
+    abroadTo: 'Хүлээн авагч',
+    abroadEmailSubject: 'Имэйлийн гарчиг',
+    calcDate: 'Хүлээн авсан огноо',
+    calcFrom: 'Илгээгч',
+    forwardDate: 'Дамжуулсан огноо',
+    forwardTo: 'Хүлээн авагч',
+    forwardEmailSubject: 'Имэйлийн гарчиг',
     driveLink: 'Google Drive холбоос',
     driveLinkPlaceholder: 'Google Drive-ын хуваалцах холбоосыг энд буулгана уу...',
     openInDrive: '📂 Drive-д нээх',
@@ -959,6 +981,20 @@ function migrateOrders(orders) {
     if (o.approvedDate === undefined) o.approvedDate = '';
     if (o.approvedEmailSubject === undefined) o.approvedEmailSubject = '';
     if (o.approvedDriveLink === undefined) o.approvedDriveLink = '';
+    if (o.abroadDate === undefined) o.abroadDate = '';
+    if (o.abroadTo === undefined) o.abroadTo = '';
+    if (o.abroadEmailSubject === undefined) o.abroadEmailSubject = '';
+    if (o.abroadDriveLink === undefined) o.abroadDriveLink = '';
+    if (o.calcDate === undefined) o.calcDate = '';
+    if (o.calcFrom === undefined) o.calcFrom = '';
+    if (o.calcDriveLink === undefined) o.calcDriveLink = '';
+    if (o.forwardDate === undefined) o.forwardDate = '';
+    if (o.forwardTo === undefined) o.forwardTo = '';
+    if (o.forwardEmailSubject === undefined) o.forwardEmailSubject = '';
+    if (o.forwardDriveLink === undefined) o.forwardDriveLink = '';
+    if (o.stage5FilledBy === undefined) o.stage5FilledBy = '';
+    if (o.stage6FilledBy === undefined) o.stage6FilledBy = '';
+    if (o.stage7FilledBy === undefined) o.stage7FilledBy = '';
     // Stage author badges: who filled each step (role: 'admin'=Ts, 'colleague'=Ayush)
     // stageBadgesFixed flag: once set, badges are real saves and must not be overwritten by migration
     if (!o.stageBadgesFixed) {
@@ -1359,6 +1395,38 @@ function renderBoard() {
         </div>
         ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.approvedDate ? formatDate(order.approvedDate) : '')}
         ${row(state.lang === 'en' ? 'Subject:' : 'Гарчиг:', order.approvedEmailSubject)}
+      `;
+    }
+    if (stageId === 'sent_abroad') {
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '🇩🇪 Sent to DE/GE' : '🇩🇪 Герман/Гүрж'}</span>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage5FilledBy)}${done}</div>
+        </div>
+        ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.abroadDate ? formatDate(order.abroadDate) : '')}
+        ${row(state.lang === 'en' ? 'To:' : 'Хүлээн авагч:', order.abroadTo)}
+        ${row(state.lang === 'en' ? 'Subject:' : 'Гарчиг:', order.abroadEmailSubject)}
+      `;
+    }
+    if (stageId === 'calculation_received') {
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '📊 Calculation Received' : '📊 Тооцоо хүлээн авсан'}</span>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage6FilledBy)}${done}</div>
+        </div>
+        ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.calcDate ? formatDate(order.calcDate) : '')}
+        ${row(state.lang === 'en' ? 'From:' : 'Илгээгч:', order.calcFrom)}
+      `;
+    }
+    if (stageId === 'forwarded_mn') {
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '🇲🇳 Forwarded to MN' : '🇲🇳 МН захиалагчид'}</span>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage7FilledBy)}${done}</div>
+        </div>
+        ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.forwardDate ? formatDate(order.forwardDate) : '')}
+        ${row(state.lang === 'en' ? 'To:' : 'Хүлээн авагч:', order.forwardTo)}
+        ${row(state.lang === 'en' ? 'Subject:' : 'Гарчиг:', order.forwardEmailSubject)}
       `;
     }
     return '';
@@ -1996,6 +2064,126 @@ function openDetailModal(orderId) {
       </div>` : ''}
     </div>
 
+    <!-- STAGE 5: Sent to DE/GE -->
+    <div class="detail-section" style="background:#fff7ed;border-color:#fed7aa">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h4>${t('stage5Info')}</h4>
+        ${canEdit ? `<button class="btn btn-sm" onclick="toggleEditStage5(${order.id})">${t('editInfo')}</button>` : ''}
+      </div>
+      <div id="stage5Display">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.85rem">
+          <span style="color:var(--text-light)">${t('abroadDate')}:</span>
+          <span>${order.abroadDate ? formatDate(order.abroadDate) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('abroadTo')}:</span>
+          <span>${order.abroadTo ? escHtml(order.abroadTo) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('abroadEmailSubject')}:</span>
+          <span>${order.abroadEmailSubject ? escHtml(order.abroadEmailSubject) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('driveLink')}:</span>
+          <span>${driveCell(order.abroadDriveLink)}</span>
+        </div>
+      </div>
+      ${canEdit ? `<div id="stage5Edit" style="display:none">
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('abroadDate')}</label>
+          <input type="date" id="editAbroadDate" value="${order.abroadDate ? order.abroadDate.split('T')[0] : ''}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('abroadTo')}</label>
+          <input type="text" id="editAbroadTo" value="${escHtml(order.abroadTo || '')}" placeholder="name@schueco.de" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('abroadEmailSubject')}</label>
+          <input type="text" id="editAbroadEmailSubject" value="${escHtml(order.abroadEmailSubject || '')}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('driveLink')}</label>
+          <input type="url" id="editAbroadDriveLink" value="${escHtml(order.abroadDriveLink || '')}" placeholder="${t('driveLinkPlaceholder')}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-sm" onclick="toggleEditStage5(${order.id})">${t('cancel')}</button>
+          <button class="btn btn-primary btn-sm" onclick="saveStage5(${order.id})">${t('saveChanges')}</button>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <!-- STAGE 6: Calculation Received from DE/GE -->
+    <div class="detail-section" style="background:#eff6ff;border-color:#bfdbfe">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h4>${t('stage6Info')}</h4>
+        ${canEdit ? `<button class="btn btn-sm" onclick="toggleEditStage6(${order.id})">${t('editInfo')}</button>` : ''}
+      </div>
+      <div id="stage6Display">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.85rem">
+          <span style="color:var(--text-light)">${t('calcDate')}:</span>
+          <span>${order.calcDate ? formatDate(order.calcDate) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('calcFrom')}:</span>
+          <span>${order.calcFrom ? escHtml(order.calcFrom) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('driveLink')}:</span>
+          <span>${driveCell(order.calcDriveLink)}</span>
+        </div>
+      </div>
+      ${canEdit ? `<div id="stage6Edit" style="display:none">
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('calcDate')}</label>
+          <input type="date" id="editCalcDate" value="${order.calcDate ? order.calcDate.split('T')[0] : ''}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('calcFrom')}</label>
+          <input type="text" id="editCalcFrom" value="${escHtml(order.calcFrom || '')}" placeholder="name@schueco.de" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('driveLink')}</label>
+          <input type="url" id="editCalcDriveLink" value="${escHtml(order.calcDriveLink || '')}" placeholder="${t('driveLinkPlaceholder')}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-sm" onclick="toggleEditStage6(${order.id})">${t('cancel')}</button>
+          <button class="btn btn-primary btn-sm" onclick="saveStage6(${order.id})">${t('saveChanges')}</button>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <!-- STAGE 7: Forwarded to MN Client -->
+    <div class="detail-section" style="background:#faf5ff;border-color:#e9d5ff">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h4>${t('stage7Info')}</h4>
+        ${canEdit ? `<button class="btn btn-sm" onclick="toggleEditStage7(${order.id})">${t('editInfo')}</button>` : ''}
+      </div>
+      <div id="stage7Display">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.85rem">
+          <span style="color:var(--text-light)">${t('forwardDate')}:</span>
+          <span>${order.forwardDate ? formatDate(order.forwardDate) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('forwardTo')}:</span>
+          <span>${order.forwardTo ? escHtml(order.forwardTo) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('forwardEmailSubject')}:</span>
+          <span>${order.forwardEmailSubject ? escHtml(order.forwardEmailSubject) : '<em style="color:var(--text-light)">—</em>'}</span>
+          <span style="color:var(--text-light)">${t('driveLink')}:</span>
+          <span>${driveCell(order.forwardDriveLink)}</span>
+        </div>
+      </div>
+      ${canEdit ? `<div id="stage7Edit" style="display:none">
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('forwardDate')}</label>
+          <input type="date" id="editForwardDate" value="${order.forwardDate ? order.forwardDate.split('T')[0] : ''}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('forwardTo')}</label>
+          <input type="text" id="editForwardTo" value="${escHtml(order.forwardTo || '')}" placeholder="client@mak.mn" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('forwardEmailSubject')}</label>
+          <input type="text" id="editForwardEmailSubject" value="${escHtml(order.forwardEmailSubject || '')}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label style="font-size:0.78rem">${t('driveLink')}</label>
+          <input type="url" id="editForwardDriveLink" value="${escHtml(order.forwardDriveLink || '')}" placeholder="${t('driveLinkPlaceholder')}" style="padding:6px 10px;font-size:0.85rem">
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-sm" onclick="toggleEditStage7(${order.id})">${t('cancel')}</button>
+          <button class="btn btn-primary btn-sm" onclick="saveStage7(${order.id})">${t('saveChanges')}</button>
+        </div>
+      </div>` : ''}
+    </div>
+
     <div class="detail-section">
       <h4>🔄 ${t('reviewCycles')}</h4>
       <div style="display:flex;align-items:center;gap:12px">
@@ -2494,6 +2682,50 @@ function saveStage4(orderId) {
   order.approvedEmailSubject = document.getElementById('editApprovedEmailSubject').value.trim();
   order.approvedDriveLink = document.getElementById('editApprovedDriveLink').value.trim();
   order.stage4FilledBy = sessionStorage.getItem('sch_role') || '';
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+
+// Stage 5: Sent to DE/GE
+function toggleEditStage5(orderId) { _toggleStageSection('stage5Display', 'stage5Edit'); }
+function saveStage5(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  order.abroadDate = document.getElementById('editAbroadDate').value;
+  order.abroadTo = document.getElementById('editAbroadTo').value.trim();
+  order.abroadEmailSubject = document.getElementById('editAbroadEmailSubject').value.trim();
+  order.abroadDriveLink = document.getElementById('editAbroadDriveLink').value.trim();
+  order.stage5FilledBy = sessionStorage.getItem('sch_role') || '';
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+
+// Stage 6: Calculation Received from DE/GE
+function toggleEditStage6(orderId) { _toggleStageSection('stage6Display', 'stage6Edit'); }
+function saveStage6(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  order.calcDate = document.getElementById('editCalcDate').value;
+  order.calcFrom = document.getElementById('editCalcFrom').value.trim();
+  order.calcDriveLink = document.getElementById('editCalcDriveLink').value.trim();
+  order.stage6FilledBy = sessionStorage.getItem('sch_role') || '';
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+}
+
+// Stage 7: Forwarded to MN Client
+function toggleEditStage7(orderId) { _toggleStageSection('stage7Display', 'stage7Edit'); }
+function saveStage7(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  order.forwardDate = document.getElementById('editForwardDate').value;
+  order.forwardTo = document.getElementById('editForwardTo').value.trim();
+  order.forwardEmailSubject = document.getElementById('editForwardEmailSubject').value.trim();
+  order.forwardDriveLink = document.getElementById('editForwardDriveLink').value.trim();
+  order.stage7FilledBy = sessionStorage.getItem('sch_role') || '';
   saveState();
   currentDetailTab = 'info';
   openDetailModal(orderId);
