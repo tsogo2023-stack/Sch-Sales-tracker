@@ -1273,12 +1273,9 @@ function renderBoard() {
     };
 
     if (stageId === 'drawing_received') {
-      // Stage 1: anchor card — show name + client + drawing version count + first received date
+      // Stage 1: show only v1 (first drawing received) — later versions belong to Step 2
       const drawings = order.drawings || [];
       const first = drawings.length > 0 ? drawings[0] : null;
-      const versionBadge = drawings.length > 0
-        ? `<span style="font-size:0.7rem;background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:1px 7px;font-weight:700">${drawings.length} ${drawings.length === 1 ? (state.lang === 'en' ? 'version' : 'хувилбар') : (state.lang === 'en' ? 'versions' : 'хувилбар')}</span>`
-        : '';
       return `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;margin-bottom:3px">
           <div class="card-title" style="color:var(--text-light)">${escHtml(order.name)}</div>
@@ -1288,17 +1285,25 @@ function renderBoard() {
           <span class="client-dot client-color-${getClientColor(order.client)}"></span>
           ${escHtml(order.client)}
         </div>
-        ${versionBadge}
         ${first && first.date ? row(state.lang === 'en' ? 'Received:' : 'Хүлээн авсан:', formatDate(first.date)) : ''}
         ${first && first.from ? row(state.lang === 'en' ? 'From:' : 'Илгээгч:', first.from) : ''}
       `;
     }
     if (stageId === 'review') {
-      // Stage 2: show products list + auto-calculated duration (step1 date → step3 date)
+      // Stage 2: show v2+ drawing versions + products list + auto-calculated duration
       const products = order.reviewProducts || [];
       const catLabel = c => ({ window: state.lang === 'en' ? 'Window' : 'Цонх', door: state.lang === 'en' ? 'Door' : 'Хаалга', facade: state.lang === 'en' ? 'Facade' : 'Фасад' }[c] || c);
-      // Auto-calculate duration: from latest drawing date to sent date (or today)
+      // Extra versions (v2, v3, ...) — all drawings after the first one
       const drawings = order.drawings || [];
+      const extraVersions = drawings.slice(1); // skip v1, it belongs to Step 1
+      const versionLines = extraVersions.length > 0
+        ? extraVersions.map((d, i) => `<div style="font-size:0.73rem;color:var(--text);padding:1px 0">
+            <span style="font-size:0.68rem;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:0 4px;font-weight:700;margin-right:4px">v${i + 2}</span>
+            ${d.date ? `<span style="font-weight:500">${formatDate(d.date)}</span>` : ''}
+            ${d.from ? `<span style="color:var(--text-light)"> · </span><span>${escHtml(d.from)}</span>` : ''}
+          </div>`).join('')
+        : '';
+      // Auto-calculate duration: from latest drawing date to sent date (or today)
       const latestDrawDate = drawings.length > 0 ? drawings[drawings.length - 1].date : null;
       const endDate = order.sentDate || new Date().toISOString().split('T')[0];
       let autoDuration = '';
@@ -1321,6 +1326,7 @@ function renderBoard() {
           <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage2FilledBy)}${done}</div>
         </div>
         ${autoDuration ? row(state.lang === 'en' ? 'Duration:' : 'Хугацаа:', autoDuration) : ''}
+        ${versionLines ? `<div style="margin-top:3px;padding-top:3px;border-top:1px solid var(--border)">${versionLines}</div>` : ''}
         <div style="margin-top:3px">${prodLines}</div>
       `;
     }
