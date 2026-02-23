@@ -686,6 +686,8 @@ const TRANSLATIONS = {
     createdCol: 'Created',
     noOrders: 'No orders yet. Click "+ New Order" to start!',
     confirmDelete: 'Are you sure you want to delete this order?',
+    deleteConfirmMsg: 'Are you sure? This cannot be undone.',
+    deleteConfirmYes: 'Yes, Delete',
     movedTo: 'Moved to',
     created: 'Order created',
     noteAdded: 'Note added',
@@ -833,6 +835,8 @@ const TRANSLATIONS = {
     createdCol: 'Үүсгэсэн',
     noOrders: 'Захиалга байхгүй. "+ Шинэ захиалга" дарна уу!',
     confirmDelete: 'Энэ захиалгыг устгах уу?',
+    deleteConfirmMsg: 'Итгэлтэй байна уу? Энэ үйлдлийг буцаах боломжгүй.',
+    deleteConfirmYes: 'Тийм, Устгах',
     movedTo: 'Шилжүүлсэн:',
     created: 'Захиалга үүсгэсэн',
     noteAdded: 'Тэмдэглэл нэмсэн',
@@ -2369,7 +2373,7 @@ function openDetailModal(orderId) {
     if (stageIdx >= 2) {
       footerHtml += `<button class="btn btn-warning btn-sm" onclick="sendBackForReview(${order.id})">${t('sendBackReview')}</button>`;
     }
-    footerHtml += `<button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">${t('deleteOrder')}</button>`;
+    footerHtml += `<button class="btn btn-danger btn-sm" onclick="confirmDeleteOrder(${order.id})">${t('deleteOrder')}</button>`;
     if (stageIdx < STAGES.length - 1) {
       footerHtml += `<button class="btn btn-primary" onclick="moveOrder(${order.id}, 1)">${t('nextStage')}</button>`;
     }
@@ -2803,8 +2807,14 @@ function saveEditInvoice(orderId, invoiceId) {
   openDetailModal(orderId);
 }
 
+function confirmDeleteOrder(orderId) {
+  document.getElementById('detailFooter').innerHTML = `
+    <span style="font-size:0.85rem;color:var(--danger);font-weight:600;flex:1">⚠️ ${t('deleteConfirmMsg')}</span>
+    <button class="btn btn-sm" onclick="openDetailModal(${orderId})">${t('cancel')}</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteOrder(${orderId})">${t('deleteConfirmYes')}</button>
+  `;
+}
 function deleteOrder(orderId) {
-  if (!confirm(t('confirmDelete'))) return;
   state.orders = state.orders.filter(o => o.id !== orderId);
   saveState();
   closeModal('detailModal');
