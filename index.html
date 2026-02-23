@@ -417,13 +417,8 @@ table.orders-table {
 <!-- Password Gate -->
 <div id="passwordGate" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#1e3a5f,#2563eb);z-index:9999;display:flex;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:16px;padding:40px;width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
-    <!-- Brand names row -->
-    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px">
-      <span style="font-size:1.2rem;font-weight:800;letter-spacing:0.06em;color:#d10019">SCHÜCO</span>
-      <div style="width:1px;height:20px;background:#e5e7eb"></div>
-      <span style="font-size:1.1rem;font-weight:700;letter-spacing:0.04em;color:#1e3a5f">MAK Windoor</span>
-    </div>
-    <h2 style="margin-bottom:6px;color:#1e3a5f;font-size:1.3rem;font-weight:700">Sales Order Tracker</h2>
+    <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
+    <h2 style="margin-bottom:6px;color:#1e3a5f;font-size:1.4rem">Sales Order Tracker</h2>
     <p style="color:#6b7280;font-size:0.85rem;margin-bottom:24px">Enter password to continue</p>
     <input id="pwInput" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()"
       style="width:100%;padding:10px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;margin-bottom:12px;outline:none;box-sizing:border-box">
@@ -434,12 +429,6 @@ table.orders-table {
 
 <!-- Top Bar -->
 <div class="topbar">
-  <div style="display:flex;align-items:center;gap:12px">
-    <span style="font-size:1rem;font-weight:800;letter-spacing:0.06em;color:#ffb3b3">SCHÜCO</span>
-    <div style="width:1px;height:20px;background:rgba(255,255,255,0.3)"></div>
-    <span style="font-size:0.95rem;font-weight:700;letter-spacing:0.03em;color:#fff">MAK Windoor</span>
-    <div style="width:1px;height:20px;background:rgba(255,255,255,0.3)"></div>
-  </div>
   <h1 id="appTitle"></h1>
   <div class="topbar-actions">
     <span id="syncStatus" style="display:inline-flex;align-items:center;gap:4px;font-size:0.75rem;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,0.15)">
