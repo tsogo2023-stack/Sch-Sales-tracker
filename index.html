@@ -453,6 +453,7 @@ table.orders-table {
   <input type="text" id="searchInput" oninput="renderBoard()">
   <select id="filterClient" onchange="renderBoard()"></select>
   <select id="filterStage" onchange="renderBoard()"></select>
+  <select id="filterYear" onchange="renderBoard()"></select>
 </div>
 
 <!-- Stats -->
@@ -483,9 +484,15 @@ table.orders-table {
         <label id="lblOrderName">Order / Drawing Name</label>
         <input type="text" id="inputOrderName">
       </div>
-      <div class="form-group">
-        <label id="lblClient">Client</label>
-        <select id="inputOrderClient"></select>
+      <div class="form-row">
+        <div class="form-group">
+          <label id="lblClient">Client</label>
+          <select id="inputOrderClient"></select>
+        </div>
+        <div class="form-group" style="max-width:110px">
+          <label id="lblYear"></label>
+          <input type="number" id="inputOrderYear" min="2020" max="2099" style="width:100%">
+        </div>
       </div>
       <div class="form-group">
         <label id="lblDescription">Description</label>
@@ -643,6 +650,8 @@ const TRANSLATIONS = {
     search: 'Search orders...',
     allClients: 'All Clients',
     allStages: 'All Stages',
+    allYears: 'All Years',
+    year: 'Year',
     tableView: '📋 Table View',
     boardView: '📊 Board View',
     export: '💾 Export',
@@ -793,6 +802,8 @@ const TRANSLATIONS = {
     search: 'Захиалга хайх...',
     allClients: 'Бүх захиалагч',
     allStages: 'Бүх шат',
+    allYears: 'Бүх жил',
+    year: 'Жил',
     tableView: '📋 Хүснэгт',
     boardView: '📊 Самбар',
     export: '💾 Экспорт',
@@ -949,6 +960,10 @@ let state = {
 // ===== PERSISTENCE =====
 function migrateOrders(orders) {
   (orders || []).forEach(o => {
+    if (o.year === undefined) {
+      const firstDate = (o.drawings && o.drawings[0] && o.drawings[0].date) ? o.drawings[0].date : null;
+      o.year = firstDate ? new Date(firstDate).getFullYear() : new Date(o.created || Date.now()).getFullYear();
+    }
     if (o.reviewCycles === undefined) o.reviewCycles = 0;
     if (!o.notes) o.notes = [];        // Firebase drops empty arrays → undefined
     if (!o.history) o.history = [];    // Firebase drops empty arrays → undefined
@@ -1171,6 +1186,8 @@ function getFilteredOrders() {
   );
   if (client) orders = orders.filter(o => o.client === client);
   if (stage) orders = orders.filter(o => o.stage === stage);
+  const year = document.getElementById('filterYear').value;
+  if (year) orders = orders.filter(o => String(o.year) === year);
   // Client-role users are always locked to their own client
   const clientLock = sessionStorage.getItem('sch_client');
   if (clientLock) orders = orders.filter(o => o.client === clientLock);
@@ -1226,6 +1243,16 @@ function updateUI() {
   STAGES.forEach(s => {
     fs.innerHTML += `<option value="${s.id}" ${s.id === currentStage ? 'selected' : ''}>${s[state.lang]}</option>`;
   });
+
+  const fy = document.getElementById('filterYear');
+  const currentYear = fy.value;
+  fy.innerHTML = `<option value="">${t('allYears')}</option>`;
+  const years = [...new Set(state.orders.map(o => o.year).filter(Boolean))].sort((a, b) => b - a);
+  years.forEach(y => {
+    fy.innerHTML += `<option value="${y}" ${String(y) === currentYear ? 'selected' : ''}>${y}</option>`;
+  });
+
+  document.getElementById('lblYear').textContent = t('year');
 
   // Client select in new order modal
   const cs = document.getElementById('inputOrderClient');
@@ -1614,6 +1641,7 @@ function openNewOrderModal() {
   }
   document.getElementById('inputOrderName').value = '';
   document.getElementById('inputOrderDesc').value = '';
+  document.getElementById('inputOrderYear').value = new Date().getFullYear();
   document.getElementById('inputReceivedFrom').value = '';
   document.getElementById('inputReceivedDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('inputEmailSubject').value = '';
@@ -1630,6 +1658,7 @@ function saveNewOrder() {
   const desc = document.getElementById('inputOrderDesc').value.trim();
   if (!name) return;
 
+  const year = parseInt(document.getElementById('inputOrderYear').value) || new Date().getFullYear();
   const receivedFrom = document.getElementById('inputReceivedFrom').value.trim();
   const receivedDate = document.getElementById('inputReceivedDate').value;
   const emailSubject = document.getElementById('inputEmailSubject').value.trim();
@@ -1645,6 +1674,7 @@ function saveNewOrder() {
     id: state.nextOrderId++,
     name,
     client,
+    year,
     description: desc,
     stage: 'drawing_received',
     stageDate: now,
