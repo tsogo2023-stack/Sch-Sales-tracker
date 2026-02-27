@@ -817,6 +817,7 @@ const TRANSLATIONS = {
     catDoor: 'Door',
     catFacade: 'Facade',
     catInterior: 'Interior Wall',
+    catSliding: 'Sliding Door',
     sentDate: 'Date Sent to Client',
     sentEmailSubject: 'Email Subject (sent to client)',
     approvedDate: 'Client Approval Date',
@@ -974,6 +975,7 @@ const TRANSLATIONS = {
     catDoor: 'Хаалга',
     catFacade: 'Фасад',
     catInterior: 'Дотор шилэн хана',
+    catSliding: 'Гүйдэг хаалга',
     sentDate: 'Захиалагчид илгээсэн огноо',
     sentEmailSubject: 'Имэйлийн гарчиг (илгээсэн)',
     approvedDate: 'Зөвшөөрсөн огноо',
@@ -1401,7 +1403,7 @@ function renderBoard() {
     if (stageId === 'review') {
       // Stage 2: show v2+ drawing versions + products list + auto-calculated duration
       const products = order.reviewProducts || [];
-      const catLabel = c => ({ window: state.lang === 'en' ? 'Window' : 'Цонх', door: state.lang === 'en' ? 'Door' : 'Хаалга', facade: state.lang === 'en' ? 'Facade' : 'Фасад', interior: state.lang === 'en' ? 'Interior Wall' : 'Дотор шилэн хана' }[c] || c);
+      const catLabel = c => ({ window: state.lang === 'en' ? 'Window' : 'Цонх', door: state.lang === 'en' ? 'Door' : 'Хаалга', facade: state.lang === 'en' ? 'Facade' : 'Фасад', interior: state.lang === 'en' ? 'Interior Wall' : 'Дотор шилэн хана', sliding: state.lang === 'en' ? 'Sliding Door' : 'Гүйдэг хаалга' }[c] || c);
       // Extra versions (v2, v3, ...) — all drawings after the first one
       const drawings = order.drawings || [];
       const extraVersions = drawings.slice(1); // skip v1, it belongs to Step 1
@@ -2016,7 +2018,7 @@ function openDetailModal(orderId) {
       </div>
       ${(() => {
         const products = order.reviewProducts || [];
-        const catLabel = c => ({ window: t('catWindow'), door: t('catDoor'), facade: t('catFacade'), interior: t('catInterior') }[c] || c);
+        const catLabel = c => ({ window: t('catWindow'), door: t('catDoor'), facade: t('catFacade'), interior: t('catInterior'), sliding: t('catSliding') }[c] || c);
         if (products.length === 0) {
           return `<p style="color:var(--text-light);font-size:0.83rem;font-style:italic;padding:2px 0 8px">${t('noProducts')}</p>`;
         }
@@ -2049,6 +2051,7 @@ function openDetailModal(orderId) {
                   <option value="door" ${p.category === 'door' ? 'selected' : ''}>${t('catDoor')}</option>
                   <option value="facade" ${p.category === 'facade' ? 'selected' : ''}>${t('catFacade')}</option>
                   <option value="interior" ${p.category === 'interior' ? 'selected' : ''}>${t('catInterior')}</option>
+                  <option value="sliding" ${p.category === 'sliding' ? 'selected' : ''}>${t('catSliding')}</option>
                 </select>
               </div>
               <div style="flex:1;min-width:120px">
@@ -2091,6 +2094,7 @@ function openDetailModal(orderId) {
               <option value="door">${t('catDoor')}</option>
               <option value="facade">${t('catFacade')}</option>
               <option value="interior">${t('catInterior')}</option>
+              <option value="sliding">${t('catSliding')}</option>
             </select>
           </div>
           <div style="flex:1;min-width:120px">
