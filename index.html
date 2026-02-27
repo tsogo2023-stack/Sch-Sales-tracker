@@ -154,6 +154,21 @@ body {
   transition: filter 0.15s;
 }
 .board-grid-cell:hover { filter: brightness(0.97); }
+.board-grid-cell-type {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+  min-height: 90px;
+  padding: 6px 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: filter 0.15s;
+}
+.board-grid-cell-type:hover { filter: brightness(0.97); }
 .board-grid-cell.cell-current {
   border-right: 2px solid var(--primary);
   border-bottom: 2px solid var(--primary);
@@ -1591,9 +1606,8 @@ function renderBoard() {
     // Type indicator cell
     const { emoji, label } = typeInfo(order.orderType);
     const typeCell = document.createElement('div');
-    typeCell.className = `board-grid-cell row-color-${rowColor}`;
-    typeCell.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6px 4px;cursor:pointer;min-height:90px';
-    typeCell.innerHTML = `<span style="font-size:1.5rem;line-height:1">${emoji}</span><span style="font-size:0.6rem;color:var(--text-light);font-weight:600;margin-top:4px;line-height:1.2">${label}</span>`;
+    typeCell.className = `board-grid-cell-type row-color-${rowColor}`;
+    typeCell.innerHTML = `<span style="font-size:1.5rem;line-height:1">${emoji}</span><span style="font-size:0.62rem;color:var(--text-light);font-weight:600;margin-top:4px;line-height:1.2">${label}</span>`;
     typeCell.onclick = () => openDetailModal(order.id);
     grid.appendChild(typeCell);
 
