@@ -615,6 +615,10 @@ function checkPw() {
     sessionStorage.setItem('sch_auth', '1');
     sessionStorage.setItem('sch_role', user.role);
     sessionStorage.setItem('sch_client', user.clientFilter || '');
+    // Client users (MAK / Ulamj) only use MN and EN — never Georgian
+    if (user.role === 'client' && state.lang === 'ka') {
+      state.lang = 'mn'; saveState();
+    }
     document.getElementById('passwordGate').style.display = 'none';
     document.getElementById('pwInput').value = '';
     updateUI();
@@ -1332,7 +1336,14 @@ function stageName(stageId) {
   return s ? s[state.lang] : stageId;
 }
 function toggleLang() {
-  state.lang = state.lang === 'en' ? 'mn' : state.lang === 'mn' ? 'ka' : 'en';
+  const isClient = sessionStorage.getItem('sch_role') === 'client';
+  if (isClient) {
+    // MAK / Ulamj: only Mongolian ↔ English
+    state.lang = state.lang === 'mn' ? 'en' : 'mn';
+  } else {
+    // Admin / Colleague: full cycle EN → MN → KA → EN
+    state.lang = state.lang === 'en' ? 'mn' : state.lang === 'mn' ? 'ka' : 'en';
+  }
   saveState();
   updateUI();
 }
@@ -1408,9 +1419,10 @@ function updateUI() {
   document.getElementById('btnNewOrder').textContent = t('newOrder');
   document.getElementById('btnManageClients').textContent = t('clients');
   document.getElementById('searchInput').placeholder = t('search');
-  document.getElementById('btnLang').textContent =
-    state.lang === 'en' ? '🇲🇳 Монгол' :
-    state.lang === 'mn' ? '🇬🇪 ქართული' : '🇬🇧 English';
+  const _isClient = sessionStorage.getItem('sch_role') === 'client';
+  document.getElementById('btnLang').textContent = _isClient
+    ? (state.lang === 'mn' ? '🇬🇧 English' : '🇲🇳 Монгол')
+    : (state.lang === 'en' ? '🇲🇳 Монгол' : state.lang === 'mn' ? '🇬🇪 ქართული' : '🇬🇧 English');
   document.getElementById('btnView').textContent = state.view === 'board' ? t('tableView') : t('boardView');
   document.getElementById('modalNewTitle').textContent = t('newOrderTitle');
   document.getElementById('lblOrderName').textContent = t('orderName');
