@@ -603,10 +603,11 @@ table.orders-table {
 <script>
 // ===== PASSWORD GATE =====
 const USERS = {
-  'ScH123':          { role: 'admin',     clientFilter: null },
-  'MongolynAlt2026': { role: 'client',    clientFilter: 'MAK' },
-  'Batmunkh123':     { role: 'client',    clientFilter: 'Ulamj' },
-  '2026AyusH':       { role: 'colleague', clientFilter: null }
+  'ScH123':          { role: 'admin',     clientFilter: null,    langDefault: 'mn', langAlt: 'en' },
+  'MongolynAlt2026': { role: 'client',    clientFilter: 'MAK',   langDefault: 'mn', langAlt: 'en' },
+  'Batmunkh123':     { role: 'client',    clientFilter: 'Ulamj', langDefault: 'mn', langAlt: 'en' },
+  '2026AyusH':       { role: 'colleague', clientFilter: null,    langDefault: 'mn', langAlt: 'en' },
+  'Alexi123':        { role: 'client',    clientFilter: null,    langDefault: 'en', langAlt: 'ka' }
 };
 function checkPw() {
   const val = document.getElementById('pwInput').value;
@@ -615,10 +616,11 @@ function checkPw() {
     sessionStorage.setItem('sch_auth', '1');
     sessionStorage.setItem('sch_role', user.role);
     sessionStorage.setItem('sch_client', user.clientFilter || '');
-    // Client users (MAK / Ulamj) only use MN and EN — never Georgian
-    if (user.role === 'client' && state.lang === 'ka') {
-      state.lang = 'mn'; saveState();
-    }
+    // Store this user's language pair and always reset to their default on login
+    sessionStorage.setItem('sch_lang_default', user.langDefault);
+    sessionStorage.setItem('sch_lang_alt', user.langAlt);
+    state.lang = user.langDefault;
+    saveState();
     document.getElementById('passwordGate').style.display = 'none';
     document.getElementById('pwInput').value = '';
     updateUI();
@@ -1336,14 +1338,9 @@ function stageName(stageId) {
   return s ? s[state.lang] : stageId;
 }
 function toggleLang() {
-  const isClient = sessionStorage.getItem('sch_role') === 'client';
-  if (isClient) {
-    // MAK / Ulamj: only Mongolian ↔ English
-    state.lang = state.lang === 'mn' ? 'en' : 'mn';
-  } else {
-    // Admin / Colleague: full cycle EN → MN → KA → EN
-    state.lang = state.lang === 'en' ? 'mn' : state.lang === 'mn' ? 'ka' : 'en';
-  }
+  const def = sessionStorage.getItem('sch_lang_default') || 'mn';
+  const alt = sessionStorage.getItem('sch_lang_alt') || 'en';
+  state.lang = state.lang === def ? alt : def;
   saveState();
   updateUI();
 }
@@ -1419,10 +1416,11 @@ function updateUI() {
   document.getElementById('btnNewOrder').textContent = t('newOrder');
   document.getElementById('btnManageClients').textContent = t('clients');
   document.getElementById('searchInput').placeholder = t('search');
-  const _isClient = sessionStorage.getItem('sch_role') === 'client';
-  document.getElementById('btnLang').textContent = _isClient
-    ? (state.lang === 'mn' ? '🇬🇧 English' : '🇲🇳 Монгол')
-    : (state.lang === 'en' ? '🇲🇳 Монгол' : state.lang === 'mn' ? '🇬🇪 ქართული' : '🇬🇧 English');
+  const _ld = sessionStorage.getItem('sch_lang_default') || 'mn';
+  const _la = sessionStorage.getItem('sch_lang_alt') || 'en';
+  const _langLabels = { en: '🇬🇧 English', mn: '🇲🇳 Монгол', ka: '🇬🇪 ქართული' };
+  document.getElementById('btnLang').textContent =
+    state.lang === _ld ? _langLabels[_la] : _langLabels[_ld];
   document.getElementById('btnView').textContent = state.view === 'board' ? t('tableView') : t('boardView');
   document.getElementById('modalNewTitle').textContent = t('newOrderTitle');
   document.getElementById('lblOrderName').textContent = t('orderName');
