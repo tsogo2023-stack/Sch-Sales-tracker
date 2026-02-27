@@ -1735,6 +1735,15 @@ function openDetailModal(orderId) {
   const canEdit = ['admin','colleague'].includes(sessionStorage.getItem('sch_role'));
 
   let infoHtml = `
+    <div class="detail-section" style="padding:10px 14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <label style="font-weight:600;font-size:0.85rem;margin:0">${t('year')}:</label>
+        <input type="number" id="orderYearInput" value="${order.year || ''}" min="2020" max="2099"
+          style="width:90px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.9rem;text-align:center">
+        ${canEdit ? `<button class="btn btn-primary btn-sm" onclick="saveOrderYear(${order.id})">${t('saveChanges')}</button>` : ''}
+      </div>
+    </div>
+
     <div class="detail-section">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <h4>📋 ${t('description')}</h4>
@@ -2544,6 +2553,17 @@ function toggleEditDesc(orderId) {
   } else {
     edit.style.display = 'none';
     display.style.display = 'block';
+  }
+}
+
+function saveOrderYear(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  const val = parseInt(document.getElementById('orderYearInput').value);
+  if (val >= 2020 && val <= 2099) {
+    order.year = val;
+    saveState();
+    updateUI();
   }
 }
 
