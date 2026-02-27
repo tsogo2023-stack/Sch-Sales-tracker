@@ -481,6 +481,20 @@ table.orders-table {
     </div>
     <div class="modal-body">
       <div class="form-group">
+        <label id="lblOrderType" style="margin-bottom:8px"></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:2px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;transition:border-color 0.15s" id="typeLblDrawing">
+            <input type="radio" name="inputOrderType" value="drawing" checked style="accent-color:var(--primary)"> 📐 <span id="typeNameDrawing"></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:2px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;transition:border-color 0.15s" id="typeLblMaterial">
+            <input type="radio" name="inputOrderType" value="material" style="accent-color:var(--primary)"> 📋 <span id="typeNameMaterial"></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:2px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;transition:border-color 0.15s" id="typeLblLicense">
+            <input type="radio" name="inputOrderType" value="license" style="accent-color:var(--primary)"> 🔑 <span id="typeNameLicense"></span>
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
         <label id="lblOrderName">Order / Drawing Name</label>
         <input type="text" id="inputOrderName">
       </div>
@@ -652,6 +666,11 @@ const TRANSLATIONS = {
     allStages: 'All Stages',
     allYears: 'All Years',
     year: 'Year',
+    orderType: 'Order Type',
+    typeDrawing: 'Drawing',
+    typeMaterial: 'Material List',
+    typeLicense: 'License',
+    typeCol: 'Type',
     tableView: '📋 Table View',
     boardView: '📊 Board View',
     export: '💾 Export',
@@ -804,6 +823,11 @@ const TRANSLATIONS = {
     allStages: 'Бүх шат',
     allYears: 'Бүх жил',
     year: 'Жил',
+    orderType: 'Захиалгын төрөл',
+    typeDrawing: 'Зураг',
+    typeMaterial: 'Материалын жагсаалт',
+    typeLicense: 'Лиценз',
+    typeCol: 'Төрөл',
     tableView: '📋 Хүснэгт',
     boardView: '📊 Самбар',
     export: '💾 Экспорт',
@@ -964,6 +988,7 @@ function migrateOrders(orders) {
       const firstDate = (o.drawings && o.drawings[0] && o.drawings[0].date) ? o.drawings[0].date : null;
       o.year = firstDate ? new Date(firstDate).getFullYear() : new Date(o.created || Date.now()).getFullYear();
     }
+    if (o.orderType === undefined) o.orderType = 'drawing';
     if (o.reviewCycles === undefined) o.reviewCycles = 0;
     if (!o.notes) o.notes = [];        // Firebase drops empty arrays → undefined
     if (!o.history) o.history = [];    // Firebase drops empty arrays → undefined
@@ -1530,13 +1555,19 @@ function renderBoard() {
     return;
   }
 
-  // Build the CSS grid
+  // Build the CSS grid (type column + 12 stage columns)
   const grid = document.createElement('div');
   grid.className = 'board-grid';
-  grid.style.gridTemplateColumns = `repeat(${allColumns.length}, minmax(230px, 280px))`;
+  grid.style.gridTemplateColumns = `72px repeat(${allColumns.length}, minmax(230px, 280px))`;
   board.appendChild(grid);
 
-  // Header row — one cell per column
+  // Header row — type column first, then one cell per stage
+  const typeHdr = document.createElement('div');
+  typeHdr.className = 'board-grid-header-cell';
+  typeHdr.style.cssText = 'justify-content:center;font-size:0.8rem;background:#f8fafc';
+  typeHdr.textContent = t('typeCol');
+  grid.appendChild(typeHdr);
+
   allColumns.forEach(stage => {
     const countHere = orders.filter(o => o.stage === stage.id).length;
     const hdr = document.createElement('div');
@@ -1545,10 +1576,26 @@ function renderBoard() {
     grid.appendChild(hdr);
   });
 
-  // One row per order — cells across all columns
+  // Helper: get emoji + label for order type
+  const typeInfo = (ot) => {
+    if (ot === 'material') return { emoji: '📋', label: t('typeMaterial') };
+    if (ot === 'license')  return { emoji: '🔑', label: t('typeLicense') };
+    return { emoji: '📐', label: t('typeDrawing') };
+  };
+
+  // One row per order — type cell first, then cells across all stage columns
   orders.forEach((order, orderIdx) => {
     const orderStageIdx = STAGES.findIndex(s => s.id === order.stage);
     const rowColor = orderIdx % 8;
+
+    // Type indicator cell
+    const { emoji, label } = typeInfo(order.orderType);
+    const typeCell = document.createElement('div');
+    typeCell.className = `board-grid-cell row-color-${rowColor}`;
+    typeCell.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6px 4px;cursor:pointer;min-height:90px';
+    typeCell.innerHTML = `<span style="font-size:1.5rem;line-height:1">${emoji}</span><span style="font-size:0.6rem;color:var(--text-light);font-weight:600;margin-top:4px;line-height:1.2">${label}</span>`;
+    typeCell.onclick = () => openDetailModal(order.id);
+    grid.appendChild(typeCell);
 
     allColumns.forEach(stage => {
       const colStageIdx = STAGES.findIndex(s => s.id === stage.id);
@@ -1649,6 +1696,13 @@ function openNewOrderModal() {
   document.getElementById('inputAttach1').value = '';
   document.getElementById('inputAttach2').value = '';
   document.getElementById('inputAttach3').value = '';
+  // Reset type to drawing
+  document.querySelector('input[name="inputOrderType"][value="drawing"]').checked = true;
+  // Set translated labels
+  document.getElementById('lblOrderType').textContent = t('orderType');
+  document.getElementById('typeNameDrawing').textContent = t('typeDrawing');
+  document.getElementById('typeNameMaterial').textContent = t('typeMaterial');
+  document.getElementById('typeNameLicense').textContent = t('typeLicense');
   openModal('newOrderModal');
 }
 
@@ -1659,6 +1713,7 @@ function saveNewOrder() {
   if (!name) return;
 
   const year = parseInt(document.getElementById('inputOrderYear').value) || new Date().getFullYear();
+  const orderType = document.querySelector('input[name="inputOrderType"]:checked').value;
   const receivedFrom = document.getElementById('inputReceivedFrom').value.trim();
   const receivedDate = document.getElementById('inputReceivedDate').value;
   const emailSubject = document.getElementById('inputEmailSubject').value.trim();
@@ -1675,8 +1730,9 @@ function saveNewOrder() {
     name,
     client,
     year,
+    orderType,
     description: desc,
-    stage: 'drawing_received',
+    stage: orderType === 'license' ? 'review' : 'drawing_received',
     stageDate: now,
     created: now,
     notes: [],
@@ -1734,16 +1790,33 @@ function openDetailModal(orderId) {
   // Helper: show Edit button only for admin/colleague
   const canEdit = ['admin','colleague'].includes(sessionStorage.getItem('sch_role'));
 
+  const typeEmoji = order.orderType === 'material' ? '📋' : order.orderType === 'license' ? '🔑' : '📐';
+  const typeLabel = order.orderType === 'material' ? t('typeMaterial') : order.orderType === 'license' ? t('typeLicense') : t('typeDrawing');
+
   let infoHtml = `
     <div class="detail-section" style="padding:10px 14px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <label style="font-weight:600;font-size:0.85rem;margin:0">${t('year')}:</label>
-        ${canEdit
-          ? `<input type="number" id="orderYearInput" value="${order.year || ''}" min="2020" max="2099"
-              style="width:90px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.9rem;text-align:center">
-             <button class="btn btn-primary btn-sm" onclick="saveOrderYear(${order.id})">${t('saveChanges')}</button>`
-          : `<span style="font-size:0.95rem;font-weight:700;color:var(--text)">${order.year || '—'}</span>`
-        }
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-weight:600;font-size:0.85rem;margin:0">${t('year')}:</label>
+          ${canEdit
+            ? `<input type="number" id="orderYearInput" value="${order.year || ''}" min="2020" max="2099"
+                style="width:90px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.9rem;text-align:center">
+               <button class="btn btn-primary btn-sm" onclick="saveOrderYear(${order.id})">${t('saveChanges')}</button>`
+            : `<span style="font-size:0.95rem;font-weight:700;color:var(--text)">${order.year || '—'}</span>`
+          }
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-weight:600;font-size:0.85rem;margin:0">${t('orderType')}:</label>
+          ${canEdit
+            ? `<select id="orderTypeSelect" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.9rem">
+                <option value="drawing" ${order.orderType === 'drawing' ? 'selected' : ''}>📐 ${t('typeDrawing')}</option>
+                <option value="material" ${order.orderType === 'material' ? 'selected' : ''}>📋 ${t('typeMaterial')}</option>
+                <option value="license" ${order.orderType === 'license' ? 'selected' : ''}>🔑 ${t('typeLicense')}</option>
+               </select>
+               <button class="btn btn-primary btn-sm" onclick="saveOrderType(${order.id})">${t('saveChanges')}</button>`
+            : `<span style="font-size:0.95rem;font-weight:700;color:var(--text)">${typeEmoji} ${typeLabel}</span>`
+          }
+        </div>
       </div>
     </div>
 
@@ -2568,6 +2641,16 @@ function saveOrderYear(orderId) {
     saveState();
     updateUI();
   }
+}
+
+function saveOrderType(orderId) {
+  const order = state.orders.find(o => o.id === orderId);
+  if (!order) return;
+  order.orderType = document.getElementById('orderTypeSelect').value;
+  saveState();
+  currentDetailTab = 'info';
+  openDetailModal(orderId);
+  updateUI();
 }
 
 function saveDesc(orderId) {
