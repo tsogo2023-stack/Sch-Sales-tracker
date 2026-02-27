@@ -426,19 +426,24 @@ table.orders-table {
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
-<!-- Password Gate -->
-<div id="passwordGate" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#1e3a5f,#2563eb);z-index:9999;display:flex;align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:16px;padding:40px;width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+<!-- Login Gate -->
+<div id="passwordGate" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#1e3a5f,#2563eb);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:40px;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
     <h2 style="margin-bottom:6px;color:#1e3a5f;font-size:1.4rem">Sales Order Tracker</h2>
-    <p style="color:#6b7280;font-size:0.85rem;margin-bottom:24px">Enter password to continue</p>
-    <input id="pwInput" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()"
+    <p style="color:#6b7280;font-size:0.85rem;margin-bottom:24px">Sign in to continue</p>
+    <input id="emailInput" type="email" placeholder="Email address" autocomplete="email"
+      onkeydown="if(event.key==='Enter')document.getElementById('pwInput').focus()"
+      style="width:100%;padding:10px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;margin-bottom:10px;outline:none;box-sizing:border-box">
+    <input id="pwInput" type="password" placeholder="Password" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()"
       style="width:100%;padding:10px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;margin-bottom:12px;outline:none;box-sizing:border-box">
-    <div id="pwError" style="color:#ef4444;font-size:0.8rem;margin-bottom:10px;display:none">Incorrect password. Try again.</div>
-    <button onclick="checkPw()" style="width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600">Enter</button>
+    <div id="pwError" style="color:#ef4444;font-size:0.8rem;margin-bottom:10px;display:none;text-align:left;padding:0 2px"></div>
+    <button id="loginBtn" onclick="doLogin()" style="width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600">Sign In</button>
   </div>
 </div>
 
@@ -458,6 +463,7 @@ table.orders-table {
       <input type="file" accept=".json" style="display:none" onchange="importData(event)">
     </label>
     <span id="clientViewLabel" style="display:none;font-size:0.8rem;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,0.25);font-weight:600"></span>
+    <button id="btnSignOut" onclick="doSignOut()" style="display:none">🚪 Sign Out</button>
   </div>
 </div>
 
@@ -601,41 +607,74 @@ table.orders-table {
 </div>
 
 <script>
-// ===== PASSWORD GATE =====
-const USERS = {
-  'ScH123':          { role: 'admin',     clientFilter: null,    langDefault: 'mn', langAlt: 'en' },
-  'MongolynAlt2026': { role: 'client',    clientFilter: 'MAK',   langDefault: 'mn', langAlt: 'en' },
-  'Batmunkh123':     { role: 'client',    clientFilter: 'Ulamj', langDefault: 'mn', langAlt: 'en' },
-  '2026AyusH':       { role: 'colleague', clientFilter: null,    langDefault: 'mn', langAlt: 'en' },
-  'Alexi123':        { role: 'client',    clientFilter: null,    langDefault: 'en', langAlt: 'ka' }
-};
-function checkPw() {
-  const val = document.getElementById('pwInput').value;
-  const user = USERS[val];
-  if (user) {
-    sessionStorage.setItem('sch_auth', '1');
-    sessionStorage.setItem('sch_role', user.role);
-    sessionStorage.setItem('sch_client', user.clientFilter || '');
-    // Store this user's language pair and always reset to their default on login
-    sessionStorage.setItem('sch_lang_default', user.langDefault);
-    sessionStorage.setItem('sch_lang_alt', user.langAlt);
-    state.lang = user.langDefault;
-    saveState();
-    document.getElementById('passwordGate').style.display = 'none';
-    document.getElementById('pwInput').value = '';
-    updateUI();
-  } else {
-    document.getElementById('pwError').style.display = 'block';
-    document.getElementById('pwInput').value = '';
-    document.getElementById('pwInput').focus();
+// ===== AUTH =====
+let auth = null; // assigned after Firebase init below
+
+function showGate() {
+  const gate = document.getElementById('passwordGate');
+  gate.style.display = 'flex';
+  setTimeout(() => { const e = document.getElementById('emailInput'); if (e) e.focus(); }, 100);
+}
+function hideGate() {
+  document.getElementById('passwordGate').style.display = 'none';
+  document.getElementById('pwError').style.display = 'none';
+}
+
+function populateSession(profile) {
+  sessionStorage.setItem('sch_auth',        '1');
+  sessionStorage.setItem('sch_role',         profile.role         || 'client');
+  sessionStorage.setItem('sch_client',       profile.clientFilter || '');
+  sessionStorage.setItem('sch_lang_default', profile.langDefault  || 'mn');
+  sessionStorage.setItem('sch_lang_alt',     profile.langAlt      || 'en');
+  const btn = document.getElementById('btnSignOut');
+  if (btn) btn.style.display = '';
+  hideGate();
+}
+function clearSession() {
+  ['sch_auth','sch_role','sch_client','sch_lang_default','sch_lang_alt'].forEach(k => sessionStorage.removeItem(k));
+  const btn = document.getElementById('btnSignOut');
+  if (btn) btn.style.display = 'none';
+}
+function showLoginError(msg) {
+  const el = document.getElementById('pwError');
+  el.textContent = msg;
+  el.style.display = 'block';
+  const btn = document.getElementById('loginBtn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+}
+
+async function doLogin() {
+  if (!auth) { showLoginError('Auth service not ready. Refresh and try again.'); return; }
+  const email    = (document.getElementById('emailInput').value || '').trim();
+  const password = document.getElementById('pwInput').value || '';
+  if (!email || !password) { showLoginError('Please enter email and password.'); return; }
+  const btn = document.getElementById('loginBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
+  document.getElementById('pwError').style.display = 'none';
+  try {
+    await firebase.auth().signInWithEmailAndPassword(email, password);
+    // onAuthStateChanged observer fires next and handles the rest
+  } catch (err) {
+    const map = {
+      'auth/user-not-found':         'No account found with this email.',
+      'auth/wrong-password':         'Incorrect password. Please try again.',
+      'auth/invalid-email':          'Please enter a valid email address.',
+      'auth/user-disabled':          'This account has been disabled.',
+      'auth/too-many-requests':      'Too many attempts. Try again later.',
+      'auth/network-request-failed': 'Network error. Check your connection.',
+      'auth/invalid-credential':     'Incorrect email or password.'
+    };
+    showLoginError(map[err.code] || 'Sign-in failed. Please try again.');
   }
 }
-// Show gate if not authenticated in this session
-if (sessionStorage.getItem('sch_auth') !== '1') {
-  document.getElementById('passwordGate').style.display = 'flex';
-  setTimeout(() => document.getElementById('pwInput').focus(), 100);
-} else {
-  document.getElementById('passwordGate').style.display = 'none';
+
+async function doSignOut() {
+  try { await firebase.auth().signOut(); } catch(e) { console.warn('Sign-out error:', e); }
+  clearSession();
+  state.lang = 'mn';
+  document.getElementById('emailInput').value = '';
+  document.getElementById('pwInput').value = '';
+  showGate();
 }
 
 // ===== FIREBASE CONFIG =====
@@ -656,9 +695,48 @@ let isSaving = false; // prevent loops when Firebase pushes data back
 try {
   firebase.initializeApp(firebaseConfig);
   db = firebase.database();
+  auth = firebase.auth();
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); // token survives browser restart
   firebaseReady = true;
 } catch(e) {
   console.warn('Firebase init failed, using offline mode:', e);
+}
+
+// Auth state observer — single entry point for post-login app startup
+// Fires on every page load (restores session if token exists) and after sign-in/out
+if (auth) {
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (user) {
+      try {
+        const snap = await db.ref('userProfiles/' + user.uid).once('value');
+        const profile = snap.val();
+        if (!profile) {
+          // Valid Firebase user but no profile configured — block access
+          await firebase.auth().signOut();
+          showLoginError('Account not configured. Please contact admin.');
+          showGate();
+          return;
+        }
+        populateSession(profile);
+        state.lang = profile.langDefault || 'mn';
+        saveState();
+        loadState();
+        updateUI();
+        setupFirebaseSync();
+      } catch(err) {
+        console.warn('Profile fetch failed:', err);
+        showLoginError('Could not load your profile. Try again.');
+        showGate();
+      }
+    } else {
+      // No signed-in user — show the login gate
+      clearSession();
+      showGate();
+    }
+  });
+} else {
+  // Auth SDK not available (offline / blocked CDN) — show gate, login will fail gracefully
+  showGate();
 }
 
 // ===== DATA =====
@@ -3255,9 +3333,10 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ===== INIT =====
-loadState();
-updateUI();
-setupFirebaseSync();
+// Show gate immediately to prevent flash of app data before auth resolves.
+// onAuthStateChanged (above) calls loadState + updateUI + setupFirebaseSync after login.
+showGate();
+loadState(); // pre-load localStorage data so it's ready when auth resolves
 </script>
 </body>
 </html>
