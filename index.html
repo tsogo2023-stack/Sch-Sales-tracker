@@ -1318,21 +1318,23 @@ function setSyncStatus(status) {
   if (!dot || !text) return;
   if (status === 'online') {
     dot.style.background = '#10b981';
-    text.textContent = state.lang === 'en' ? 'Synced' : 'Синк';
+    text.textContent = ls('Synced', 'Синк', 'სინქ');
   } else if (status === 'offline') {
     dot.style.background = '#ef4444';
-    text.textContent = state.lang === 'en' ? 'Offline' : 'Офлайн';
+    text.textContent = ls('Offline', 'Офлайн', 'ოფლაინი');
   } else if (status === 'error') {
     dot.style.background = '#ef4444';
-    text.textContent = state.lang === 'en' ? 'Sync error' : 'Алдаа';
+    text.textContent = ls('Sync error', 'Алдаа', 'შეცდომა');
   } else {
     dot.style.background = '#f59e0b';
-    text.textContent = state.lang === 'en' ? 'Connecting...' : 'Холбогдож байна...';
+    text.textContent = ls('Connecting...', 'Холбогдож байна...', 'დაკავშირება...');
   }
 }
 
 // ===== LANG =====
 function t(key) { return TRANSLATIONS[state.lang][key] || key; }
+// Pick string by current language: ls('English', 'Монгол', 'ქართული')
+function ls(en, mn, ka) { return state.lang === 'en' ? en : state.lang === 'mn' ? mn : ka; }
 function stageName(stageId) {
   const s = STAGES.find(s => s.id === stageId);
   return s ? s[state.lang] : stageId;
@@ -1540,7 +1542,7 @@ function renderBoard() {
 
   // Build the inner HTML for a past-stage card — each stage shows only its own relevant data
   function pastStageCardHtml(order, stageId) {
-    const done = `<span style="font-size:0.7rem;color:var(--success);font-weight:700;white-space:nowrap">✓ ${state.lang === 'en' ? 'Done' : 'Дууссан'}</span>`;
+    const done = `<span style="font-size:0.7rem;color:var(--success);font-weight:700;white-space:nowrap">✓ ${ls('Done', 'Дууссан', 'შესრულდა')}</span>`;
     const lbl = (txt) => `<span style="color:var(--text-light);min-width:0">${txt}</span>`;
     const val = (txt) => `<span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(txt)}</span>`;
     const row = (label, text) => text
@@ -1566,8 +1568,8 @@ function renderBoard() {
           <span class="client-dot client-color-${getClientColor(order.client)}"></span>
           ${escHtml(order.client)}
         </div>
-        ${first && first.date ? row(state.lang === 'en' ? 'Received:' : 'Хүлээн авсан:', formatDate(first.date)) : ''}
-        ${first && first.from ? row(state.lang === 'en' ? 'From:' : 'Илгээгч:', first.from) : ''}
+        ${first && first.date ? row(ls('Received:', 'Хүлээн авсан:', 'მიღებულია:'), formatDate(first.date)) : ''}
+        ${first && first.from ? row(ls('From:', 'Илгээгч:', 'გამომგზავნი:'), first.from) : ''}
       `;
     }
     if (stageId === 'review') {
@@ -1597,7 +1599,7 @@ function renderBoard() {
       if (latestDrawDate && endDate) {
         const d1 = new Date(latestDrawDate), d2 = new Date(endDate);
         const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
-        if (diff >= 0) autoDuration = diff + ' ' + (state.lang === 'en' ? (diff === 1 ? 'day' : 'days') : 'өдөр');
+        if (diff >= 0) autoDuration = diff + ' ' + ls(diff === 1 ? 'day' : 'days', 'өдөр', 'დღე');
       }
       const prodLines = products.length > 0
         ? products.map(p => `<div style="font-size:0.73rem;color:var(--text);padding:1px 0">
@@ -1606,17 +1608,17 @@ function renderBoard() {
             <span style="color:var(--text-light)"> · </span>${p.m2 ? escHtml(String(p.m2)) + ' m²' : '—'}
             <span style="color:var(--text-light)"> · </span>${p.color ? escHtml(p.color) : '—'}${p.finish === 'fine' ? ' <span style="font-size:0.68rem;font-weight:700;background:#ede9fe;color:#6d28d9;border-radius:4px;padding:0 4px">FS</span>' : ''}
           </div>`).join('')
-        : `<div style="font-size:0.73rem;color:var(--text-light);font-style:italic">${state.lang === 'en' ? 'No products yet' : 'Бүтээгдэхүүн байхгүй'}</div>`;
+        : `<div style="font-size:0.73rem;color:var(--text-light);font-style:italic">${ls('No products yet', 'Бүтээгдэхүүн байхгүй', 'პროდუქტები არ არის')}</div>`;
       const totalM2 = products.reduce((sum, p) => sum + (parseFloat(p.m2) || 0), 0);
       const totalM2Html = totalM2 > 0
         ? `<span style="font-size:0.75rem;font-weight:700;background:#dcfce7;color:#15803d;border-radius:8px;padding:1px 8px;white-space:nowrap">${totalM2 % 1 === 0 ? totalM2 : totalM2.toFixed(1)} m² total</span>`
         : '';
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
-          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '🔍 Review' : '🔍 Хяналт'}</span>
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${ls('🔍 Review', '🔍 Хяналт', '🔍 განხილვა')}</span>
           <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${totalM2Html}${authorBadge(order.stage2FilledBy)}${done}</div>
         </div>
-        ${autoDuration ? row(state.lang === 'en' ? 'Duration:' : 'Хугацаа:', autoDuration) : ''}
+        ${autoDuration ? row(ls('Duration:', 'Хугацаа:', 'ხანგრძლივობა:'), autoDuration) : ''}
         ${versionLines ? `<div style="margin-top:3px;padding-top:3px;border-top:1px solid var(--border)">${versionLines}</div>` : ''}
         <div style="margin-top:3px">${prodLines}</div>
       `;
@@ -1626,62 +1628,62 @@ function renderBoard() {
       const waitDays = order.sentDate ? daysBetween(order.sentDate) : null;
       const waitHtml = waitDays !== null
         ? `<div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:0.75rem;overflow:hidden">
-            ${lbl(state.lang === 'en' ? 'Waiting:' : 'Хүлээж байна:')}
+            ${lbl(ls('Waiting:', 'Хүлээж байна:', 'ლოდინი:'))}
             <span style="font-weight:600;color:${waitDays >= 7 ? 'var(--danger)' : waitDays >= 4 ? '#d97706' : 'var(--success)'}">
-              ${waitDays} ${state.lang === 'en' ? (waitDays === 1 ? 'day' : 'days') : 'өдөр'}
+              ${waitDays} ${ls(waitDays === 1 ? 'day' : 'days', 'өдөр', 'დღე')}
             </span>
           </div>` : '';
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
-          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '📤 Sent to Client' : '📤 Захиалагчид илгээсэн'}</span>
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${ls('📤 Sent to Client', '📤 Захиалагчид илгээсэн', '📤 გაგზავნილია კლიენტთან')}</span>
           <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage3FilledBy)}${done}</div>
         </div>
-        ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.sentDate ? formatDate(order.sentDate) : '')}
+        ${row(ls('Date:', 'Огноо:', 'თარიღი:'), order.sentDate ? formatDate(order.sentDate) : '')}
         ${waitHtml}
-        ${row(state.lang === 'en' ? 'Subject:' : 'Гарчиг:', order.sentEmailSubject)}
+        ${row(ls('Subject:', 'Гарчиг:', 'სათაური:'), order.sentEmailSubject)}
       `;
     }
     if (stageId === 'client_approved') {
       // Stage 4: show only approval date + email subject
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
-          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '✅ Approved' : '✅ Зөвшөөрсөн'}</span>
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${ls('✅ Approved', '✅ Зөвшөөрсөн', '✅ დამტკიცდა')}</span>
           <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage4FilledBy)}${done}</div>
         </div>
-        ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.approvedDate ? formatDate(order.approvedDate) : '')}
-        ${row(state.lang === 'en' ? 'Subject:' : 'Гарчиг:', order.approvedEmailSubject)}
+        ${row(ls('Date:', 'Огноо:', 'თარიღი:'), order.approvedDate ? formatDate(order.approvedDate) : '')}
+        ${row(ls('Subject:', 'Гარчиг:', 'სათაური:'), order.approvedEmailSubject)}
       `;
     }
     if (stageId === 'sent_abroad') {
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
-          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '🇩🇪 Sent to DE/GE' : '🇩🇪 Герман/Гүрж'}</span>
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${ls('🇩🇪 Sent to DE/GE', '🇩🇪 Герман/Гүрж', '🇩🇪 გაგზავნილია')}</span>
           <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage5FilledBy)}${done}</div>
         </div>
-        ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.abroadDate ? formatDate(order.abroadDate) : '')}
-        ${row(state.lang === 'en' ? 'To:' : 'Хүлээн авагч:', order.abroadTo)}
-        ${row(state.lang === 'en' ? 'Subject:' : 'Гарчиг:', order.abroadEmailSubject)}
+        ${row(ls('Date:', 'Огноо:', 'თარიღი:'), order.abroadDate ? formatDate(order.abroadDate) : '')}
+        ${row(ls('To:', 'Хүлээн авагч:', 'ვის:'), order.abroadTo)}
+        ${row(ls('Subject:', 'Гарчиг:', 'სათაური:'), order.abroadEmailSubject)}
       `;
     }
     if (stageId === 'calculation_received') {
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
-          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '📊 Calculation Received' : '📊 Тооцоо хүлээн авсан'}</span>
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${ls('📊 Calculation Received', '📊 Тооцоо хүлээн авсан', '📊 კალკულაცია მიღებულია')}</span>
           <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage6FilledBy)}${done}</div>
         </div>
-        ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.calcDate ? formatDate(order.calcDate) : '')}
-        ${row(state.lang === 'en' ? 'From:' : 'Илгээгч:', order.calcFrom)}
+        ${row(ls('Date:', 'Огноо:', 'თარიღი:'), order.calcDate ? formatDate(order.calcDate) : '')}
+        ${row(ls('From:', 'Илгээгч:', 'გამომგზავნი:'), order.calcFrom)}
       `;
     }
     if (stageId === 'forwarded_mn') {
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px">
-          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${state.lang === 'en' ? '🇲🇳 Forwarded to MN' : '🇲🇳 МН захиалагчид'}</span>
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${ls('🇲🇳 Forwarded to MN', '🇲🇳 МН захиалагчид', '🇲🇳 გადაგზავნილია MN')}</span>
           <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${authorBadge(order.stage7FilledBy)}${done}</div>
         </div>
-        ${row(state.lang === 'en' ? 'Date:' : 'Огноо:', order.forwardDate ? formatDate(order.forwardDate) : '')}
-        ${row(state.lang === 'en' ? 'To:' : 'Хүлээн авагч:', order.forwardTo)}
-        ${row(state.lang === 'en' ? 'Subject:' : 'Гарчиг:', order.forwardEmailSubject)}
+        ${row(ls('Date:', 'Огноо:', 'თარიღი:'), order.forwardDate ? formatDate(order.forwardDate) : '')}
+        ${row(ls('To:', 'Хүлээн авагч:', 'ვის:'), order.forwardTo)}
+        ${row(ls('Subject:', 'Гарчиг:', 'სათაური:'), order.forwardEmailSubject)}
       `;
     }
     return '';
@@ -1711,16 +1713,16 @@ function renderBoard() {
     if (stage.id === 'drawing_received') {
       const drawings = order.drawings || [];
       const first = drawings.length > 0 ? drawings[0] : null;
-      const dateRow = first && first.date ? `<div style="font-size:0.75rem;color:var(--text-light)">${state.lang === 'en' ? 'Received:' : 'Хүлээн авсан:'} <span style="font-weight:500;color:var(--text)">${formatDate(first.date)}</span></div>` : '';
-      const fromRow = first && first.from ? `<div style="font-size:0.75rem;color:var(--text-light)">${state.lang === 'en' ? 'From:' : 'Илгээгч:'} <span style="font-weight:500;color:var(--text)">${escHtml(first.from)}</span></div>` : '';
+      const dateRow = first && first.date ? `<div style="font-size:0.75rem;color:var(--text-light)">${ls('Received:', 'Хүлээн авсан:', 'მიღებულია:')} <span style="font-weight:500;color:var(--text)">${formatDate(first.date)}</span></div>` : '';
+      const fromRow = first && first.from ? `<div style="font-size:0.75rem;color:var(--text-light)">${ls('From:', 'Илгээгч:', 'გამომგზავნი:')} <span style="font-weight:500;color:var(--text)">${escHtml(first.from)}</span></div>` : '';
       stageExtra = dateRow + fromRow;
     }
     if (stage.id === 'sent_to_client') {
       // Days waiting for client approval since sent date
       if (order.sentDate) {
         const waitDays = daysBetween(order.sentDate);
-        stageExtra = `<div style="font-size:0.75rem;margin-top:2px"><span style="color:var(--text-light)">${state.lang === 'en' ? 'Sent:' : 'Илгээсэн:'}</span> <span style="font-weight:500">${formatDate(order.sentDate)}</span></div>
-          <div style="font-size:0.75rem"><span style="color:var(--text-light)">${state.lang === 'en' ? 'Waiting:' : 'Хүлээж байна:'}</span> <span style="font-weight:600;color:${waitDays >= 7 ? 'var(--danger)' : waitDays >= 4 ? 'var(--warning)' : 'var(--success)'}">${waitDays} ${state.lang === 'en' ? (waitDays === 1 ? 'day' : 'days') : 'өдөр'}</span></div>`;
+        stageExtra = `<div style="font-size:0.75rem;margin-top:2px"><span style="color:var(--text-light)">${ls('Sent:', 'Илгээсэн:', 'გაგზავნილია:')}</span> <span style="font-weight:500">${formatDate(order.sentDate)}</span></div>
+          <div style="font-size:0.75rem"><span style="color:var(--text-light)">${ls('Waiting:', 'Хүлээж байна:', 'ლოდინი:')}</span> <span style="font-weight:600;color:${waitDays >= 7 ? 'var(--danger)' : waitDays >= 4 ? 'var(--warning)' : 'var(--success)'}">${waitDays} ${ls(waitDays === 1 ? 'day' : 'days', 'өдөр', 'დღე')}</span></div>`;
       }
     }
     return `<div class="order-card ${alertClass}" style="margin:0;box-shadow:none;border-radius:0;border:none;background:transparent">
@@ -1803,14 +1805,14 @@ function renderBoard() {
         // Past stage — dimmed with row color tint
         cell.className = `board-grid-cell row-color-${rowColor}`;
         cell.style.opacity = '0.72';
-        cell.title = state.lang === 'en' ? 'Click to view details' : 'Дэлгэрэнгүй үзэхийн тулд дарна уу';
+        cell.title = ls('Click to view details', 'Дэлгэрэнгүй үзэхийн тулд дарна уу', 'დეტალების სანახავად დააჭირეთ');
         // Early stages have rich summaries; later stages just show the stage name + done badge
         if (EARLY_STAGE_IDS.includes(stage.id)) {
           cell.innerHTML = pastStageCardHtml(order, stage.id);
         } else {
           cell.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
             <span style="font-size:0.78rem;font-weight:600;color:var(--text-light)">${stage[state.lang]}</span>
-            <span style="font-size:0.7rem;color:var(--success);font-weight:700;white-space:nowrap">✓ ${state.lang === 'en' ? 'Done' : 'Дууссан'}</span>
+            <span style="font-size:0.7rem;color:var(--success);font-weight:700;white-space:nowrap">✓ ${ls('Done', 'Дууссан', 'შესრულდა')}</span>
           </div>`;
         }
         cell.onclick = () => openDetailModal(order.id);
@@ -2182,8 +2184,8 @@ function openDetailModal(orderId) {
                min="0" step="0.5" placeholder="${t('reviewDurationPlaceholder')}"
                style="width:90px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:0.85rem"
                onchange="saveDuration(${order.id})">
-             <span style="color:var(--text-light);font-size:0.8rem">${state.lang === 'en' ? 'days' : 'өдөр'}</span>`
-          : `<span>${order.reviewDuration ? escHtml(String(order.reviewDuration)) + ' ' + (state.lang === 'en' ? 'days' : 'өдөр') : '<em style="color:var(--text-light)">—</em>'}</span>`
+             <span style="color:var(--text-light);font-size:0.8rem">${ls('days', 'өдөр', 'დღე')}</span>`
+          : `<span>${order.reviewDuration ? escHtml(String(order.reviewDuration)) + ' ' + ls('days', 'өдөр', 'დღე') : '<em style="color:var(--text-light)">—</em>'}</span>`
         }
       </div>
 
@@ -2509,7 +2511,7 @@ function openDetailModal(orderId) {
       <h4>🔄 ${t('reviewCycles')}</h4>
       <div style="display:flex;align-items:center;gap:12px">
         <span class="review-badge">🔄 ${order.reviewCycles} ${order.reviewCycles === 1 ? t('revision') : t('revisions')}</span>
-        <span style="font-size:0.8rem;color:var(--text-light)">${order.reviewCycles === 0 ? (state.lang === 'en' ? 'No revisions yet' : 'Засвар хараахан хийгдээгүй') : ''}</span>
+        <span style="font-size:0.8rem;color:var(--text-light)">${order.reviewCycles === 0 ? ls('No revisions yet', 'Засвар байхгүй', 'გადასინჯვები არ არის') : ''}</span>
       </div>
     </div>
     ${canEdit ? `
