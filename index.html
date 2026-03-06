@@ -462,6 +462,7 @@ table.orders-table {
       <button onclick="this.nextElementSibling.click()">📂 Import</button>
       <input type="file" accept=".json" style="display:none" onchange="importData(event)">
     </label>
+    <button id="btnLogs" onclick="openLogsModal()" style="display:none;padding:6px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;font-size:0.85rem">📋 Logs</button>
     <span id="clientViewLabel" style="display:none;font-size:0.8rem;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,0.25);font-weight:600"></span>
     <button id="btnSignOut" onclick="doSignOut()" style="display:none">🚪 Sign Out</button>
   </div>
@@ -606,6 +607,16 @@ table.orders-table {
   </div>
 </div>
 
+<div class="modal-overlay" id="logsModal">
+  <div class="modal" style="max-width:700px;width:95%">
+    <div class="modal-header">
+      <h2>📋 <span id="logsModalTitle">Activity Logs</span></h2>
+      <button class="modal-close" onclick="closeModal('logsModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="logsBody" style="max-height:70vh;overflow-y:auto;padding:12px"></div>
+  </div>
+</div>
+
 <script>
 // ===== AUTH =====
 let auth = null; // assigned after Firebase init below
@@ -628,12 +639,16 @@ function populateSession(profile) {
   sessionStorage.setItem('sch_lang_alt',     profile.langAlt      || 'en');
   const btn = document.getElementById('btnSignOut');
   if (btn) btn.style.display = '';
+  const btnLogs = document.getElementById('btnLogs');
+  if (btnLogs) btnLogs.style.display = (profile.role === 'admin') ? '' : 'none';
   hideGate();
 }
 function clearSession() {
   ['sch_auth','sch_role','sch_client','sch_lang_default','sch_lang_alt'].forEach(k => sessionStorage.removeItem(k));
   const btn = document.getElementById('btnSignOut');
   if (btn) btn.style.display = 'none';
+  const btnLogs = document.getElementById('btnLogs');
+  if (btnLogs) btnLogs.style.display = 'none';
 }
 function showLoginError(msg) {
   const el = document.getElementById('pwError');
@@ -669,12 +684,121 @@ async function doLogin() {
 }
 
 async function doSignOut() {
+  closeSession();
   try { await firebase.auth().signOut(); } catch(e) { console.warn('Sign-out error:', e); }
   clearSession();
   state.lang = 'mn';
   document.getElementById('emailInput').value = '';
   document.getElementById('pwInput').value = '';
   showGate();
+}
+
+// ===== ACTIVITY LOG =====
+let _sessionRef = null;
+let _sessionStart = null;
+
+function _getDeviceInfo() {
+  const ua = navigator.userAgent;
+  let os = 'Unknown OS';
+  if (/Windows/.test(ua)) os = 'Windows';
+  else if (/Mac OS X/.test(ua)) os = 'macOS';
+  else if (/Android/.test(ua)) os = 'Android';
+  else if (/iPhone|iPad/.test(ua)) os = 'iOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+  let browser = 'Unknown', version = '';
+  const edgeM = ua.match(/Edg\/(\d+)/);
+  const chromeM = ua.match(/Chrome\/(\d+)/);
+  const firefoxM = ua.match(/Firefox\/(\d+)/);
+  const safariM = ua.match(/Version\/(\d+).*Safari/);
+  const operaM = ua.match(/OPR\/(\d+)/);
+  if (operaM)    { browser = 'Opera';   version = operaM[1]; }
+  else if (edgeM)    { browser = 'Edge';    version = edgeM[1]; }
+  else if (chromeM)  { browser = 'Chrome';  version = chromeM[1]; }
+  else if (firefoxM) { browser = 'Firefox'; version = firefoxM[1]; }
+  else if (safariM)  { browser = 'Safari';  version = safariM[1]; }
+  let device = 'Desktop';
+  if (/Mobi|Android(?!.*Tablet)|iPhone/.test(ua)) device = 'Mobile';
+  else if (/Tablet|iPad/.test(ua)) device = 'Tablet';
+  return `${os} · ${browser} ${version} · ${device}`;
+}
+
+function logSession(user, profile) {
+  if (!db) return;
+  // Avoid duplicate entries on page refresh — reuse existing session key
+  const existingKey = sessionStorage.getItem('sch_session_key');
+  if (existingKey) {
+    _sessionRef = db.ref('activityLog/' + existingKey);
+    _sessionStart = parseInt(sessionStorage.getItem('sch_session_start') || String(Date.now()), 10);
+    return;
+  }
+  _sessionStart = Date.now();
+  const entry = {
+    uid: user.uid,
+    email: user.email,
+    role: profile.role || 'client',
+    loginTime: new Date().toISOString(),
+    device: _getDeviceInfo()
+  };
+  const newRef = db.ref('activityLog').push(entry);
+  _sessionRef = newRef;
+  sessionStorage.setItem('sch_session_key', newRef.key);
+  sessionStorage.setItem('sch_session_start', String(_sessionStart));
+}
+
+function closeSession() {
+  if (!_sessionRef) return;
+  const durationMin = _sessionStart ? Math.round((Date.now() - _sessionStart) / 60000) : 0;
+  _sessionRef.update({ logoutTime: new Date().toISOString(), durationMin });
+  _sessionRef = null;
+  _sessionStart = null;
+  sessionStorage.removeItem('sch_session_key');
+  sessionStorage.removeItem('sch_session_start');
+}
+
+function logAction(text) {
+  if (!_sessionRef) return;
+  _sessionRef.child('actions').push({ time: new Date().toISOString(), text });
+}
+
+window.addEventListener('beforeunload', closeSession);
+
+function openLogsModal() {
+  if (sessionStorage.getItem('sch_role') !== 'admin') return;
+  document.getElementById('logsModalTitle').textContent = t('logs');
+  const body = document.getElementById('logsBody');
+  body.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:20px">Loading...</p>';
+  openModal('logsModal');
+  db.ref('activityLog').orderByChild('loginTime').limitToLast(100).once('value', snap => {
+    const entries = [];
+    snap.forEach(child => entries.unshift({ key: child.key, ...child.val() }));
+    if (entries.length === 0) {
+      body.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:20px">No logs yet.</p>';
+      return;
+    }
+    body.innerHTML = entries.map(e => {
+      const loginDt = e.loginTime ? new Date(e.loginTime).toLocaleString() : '—';
+      const duration = e.durationMin != null ? `${e.durationMin} min` : (e.logoutTime ? '—' : 'Active now');
+      const roleColor = e.role === 'admin' ? '#2563eb' : e.role === 'colleague' ? '#16a34a' : '#6b7280';
+      const roleBadge = `<span style="font-size:0.7rem;padding:2px 8px;border-radius:10px;font-weight:600;background:${roleColor};color:#fff">${e.role}</span>`;
+      const actions = e.actions ? Object.values(e.actions) : [];
+      const actionsList = actions.map(a =>
+        `<li style="font-size:0.8rem;padding:2px 0;color:var(--text-light)">${new Date(a.time).toLocaleTimeString()} — ${escHtml(a.text)}</li>`
+      ).join('');
+      const actionsHtml = actions.length
+        ? `<details style="margin-top:6px"><summary style="font-size:0.8rem;cursor:pointer;color:var(--primary)">${actions.length} action(s)</summary><ul style="margin:6px 0 0 16px;padding:0">${actionsList}</ul></details>`
+        : '<span style="font-size:0.8rem;color:var(--text-light)">No actions recorded</span>';
+      return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+          <span style="font-weight:600;font-size:0.95rem">${escHtml(e.email || '?')}</span>
+          ${roleBadge}
+          <span style="font-size:0.8rem;color:var(--text-light)">${loginDt}</span>
+          <span style="font-size:0.8rem;color:var(--text-light)">⏱ ${duration}</span>
+        </div>
+        <div style="font-size:0.8rem;color:var(--text-light);margin-top:4px">💻 ${escHtml(e.device || '—')}</div>
+        <div style="margin-top:6px">${actionsHtml}</div>
+      </div>`;
+    }).join('');
+  });
 }
 
 // ===== FIREBASE CONFIG =====
@@ -718,6 +842,7 @@ if (auth) {
           return;
         }
         populateSession(profile);
+        logSession(user, profile);
         state.lang = profile.langDefault || 'mn';
         saveState();
         loadState();
@@ -912,7 +1037,8 @@ const TRANSLATIONS = {
     invoiceDate: 'Invoice Date',
     invoiceNote: 'Description / Note',
     invoiceNotePlaceholder: 'What this invoice covers...',
-    noInvoices: 'No invoices yet. Click "+ Add Invoice" to add one.'
+    noInvoices: 'No invoices yet. Click "+ Add Invoice" to add one.',
+    logs: 'Activity Logs'
   },
   mn: {
     title: '📊 Борлуулалтын захиалгын хяналт',
@@ -1070,7 +1196,8 @@ const TRANSLATIONS = {
     invoiceDate: 'Нэхэмжлэлийн огноо',
     invoiceNote: 'Тайлбар / Тэмдэглэл',
     invoiceNotePlaceholder: 'Энэ нэхэмжлэл юуг хамарч байгаа...',
-    noInvoices: 'Нэхэмжлэл байхгүй. "+ Нэхэмжлэл нэмэх" дарна уу.'
+    noInvoices: 'Нэхэмжлэл байхгүй. "+ Нэхэмжлэл нэмэх" дарна уу.',
+    logs: 'Үйлдлийн бүртгэл'
   },
   ka: {
     title: '📊 გაყიდვების შეკვეთების ტრეკერი',
@@ -2827,6 +2954,7 @@ function moveOrder(orderId, direction) {
   order.stageDate = new Date().toISOString();
   if (!order.history) order.history = [];
   order.history.push({ date: order.stageDate, text: `${t('movedTo')} ${stageName(order.stage)}` });
+  logAction(`Moved '${order.name}' → ${stageName(order.stage)}`);
   saveState();
   closeModal('detailModal');
   updateUI();
@@ -2840,6 +2968,7 @@ function sendBackForReview(orderId) {
   order.stageDate = new Date().toISOString();
   if (!order.history) order.history = [];
   order.history.push({ date: order.stageDate, text: `${t('sentBackReview')} (#${order.reviewCycles})` });
+  logAction(`Sent '${order.name}' back for review (cycle ${order.reviewCycles})`);
   saveState();
   closeModal('detailModal');
   updateUI();
@@ -2856,6 +2985,7 @@ function addNote(orderId) {
   if (!order.history) order.history = [];
   order.notes.push({ date: now, text });
   order.history.push({ date: now, text: `${t('noteAdded')}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}` });
+  logAction(`Added note to '${order.name}'`);
   saveState();
   openDetailModal(orderId);
 }
@@ -2876,6 +3006,7 @@ function addPayment(orderId) {
   if (!order.history) order.history = [];
   order.payments.push({ date: new Date(date).toISOString(), amount, note });
   order.history.push({ date: new Date().toISOString(), text: `💰 ${state.lang === 'en' ? 'Payment received' : 'Төлбөр хүлээн авсан'}: ${formatEur(amount)}${note ? ' - ' + note : ''}` });
+  logAction(`Added payment to '${order.name}'`);
   saveState();
   currentDetailTab = 'finance';
   openDetailModal(orderId);
@@ -3174,6 +3305,7 @@ function saveNewInvoice(orderId) {
   const newInv = { id: order.nextInvoiceId++, amount, date, note };
   order.invoices.push(newInv);
   order.history.push({ date: new Date().toISOString(), text: `💶 ${state.lang === 'en' ? 'Invoice added' : 'Нэхэмжлэл нэмэгдсэн'}: INV-${newInv.id} ${formatEur(amount)}` });
+  logAction(`Added invoice to '${order.name}'`);
   saveState();
   currentDetailTab = 'finance';
   openDetailModal(orderId);
@@ -3233,6 +3365,8 @@ function confirmDeleteOrder(orderId) {
   `;
 }
 function deleteOrder(orderId) {
+  const _del = state.orders.find(o => o.id === orderId);
+  if (_del) logAction(`Deleted order '${_del.name}'`);
   state.orders = state.orders.filter(o => o.id !== orderId);
   saveState();
   closeModal('detailModal');
@@ -3260,6 +3394,7 @@ function addClient() {
   const name = input.value.trim();
   if (!name || state.clients.includes(name)) return;
   state.clients.push(name);
+  logAction(`Added client '${name}'`);
   input.value = '';
   saveState();
   updateUI();
@@ -3300,6 +3435,7 @@ function importData(event) {
         state = data;
         saveState();
         updateUI();
+        logAction('Imported data backup');
         alert(state.lang === 'en' ? 'Data imported successfully!' : 'Мэдээлэл амжилттай импортлогдлоо!');
       }
     } catch(err) {
